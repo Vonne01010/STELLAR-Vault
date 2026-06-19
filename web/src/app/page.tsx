@@ -6,7 +6,7 @@ import FundAccount from '@/components/FundAccount';
 import AddTrustline from '@/components/AddTrustline';
 import BalanceCard from '@/components/BalanceCard';
 import SendPayment from '@/components/SendPayment';
-import SavingsGoal from '@/components/SavingsGoal';
+import SavingsDashboard from '@/components/SavingsDashboard';
 
 export default function Home() {
   const wallet = useWallet();
@@ -51,19 +51,11 @@ export default function Home() {
               <FundAccount publicKey={publicKey} onFunded={refresh} />
               <AddTrustline publicKey={publicKey} onDone={refresh} />
             </div>
-            <BalanceCard publicKey={publicKey} refreshKey={refreshKey} />
-            <button
-              onClick={refresh}
-              className="mt-3 text-sm text-gray-500 underline hover:text-gray-700"
-            >
-              Refresh balances
-            </button>
-            <SendPayment publicKey={publicKey} onSent={refresh} />
           </>
         )}
 
-        {/* The Soroban panel renders even before connecting (reads are wallet-free). */}
-        <SavingsGoal publicKey={publicKey} />
+        {/* The Soroban Savings Dashboard */}
+        <SavingsDashboard publicKey={publicKey} />
 
         <footer className="mt-10 text-center text-xs text-gray-400">
           Built for the StellarX PH workshop @ PUP QC · pick an idea, then bend
