@@ -1,4 +1,4 @@
-# STELLA Vault (Soroban Transparent Escrow Ledger for Localized Assets))
+# STELLA Vault (Soroban Transparent Escrow Ledger for Localized Assets)
 STELLA Vault disrupts the over-saturated pool of generic digital lockboxes by transforming traditional Filipino paluwagan savings circles and remittance streams into a permissionless, No-KYC collaborative vault protocol built on Soroban smart contracts that instantly pegs micro-savings to stable USD assets.
 
 ## Problem
