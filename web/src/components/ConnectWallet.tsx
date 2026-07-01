@@ -4,7 +4,7 @@ import type { WalletState } from '@/hooks/useWallet';
 
 export default function ConnectWallet(wallet: WalletState) {
   const [copied, setCopied] = useState(false);
-  const { publicKey, connecting, error, connect, disconnect, ready, status } = wallet;
+  const { publicKey, connecting, error, connect, disconnect, ready, status, network, provider } = wallet;
 
   const copy = async () => {
     if (!publicKey) return;
@@ -51,6 +51,12 @@ export default function ConnectWallet(wallet: WalletState) {
       >
         {buttonLabel}
       </button>
+      <p className="mt-2 text-xs text-gray-500">
+        {connecting ? 'Opening Freighter…' : `Network: ${network === 'testnet' ? 'Testnet' : network}`}
+      </p>
+      {provider !== 'unknown' && !publicKey && (
+        <p className="text-xs text-gray-500">Provider: {provider}</p>
+      )}
       {error && <p className="mt-2 max-w-xs text-sm text-red-500">{error}</p>}
     </div>
   );
