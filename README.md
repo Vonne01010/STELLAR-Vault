@@ -1,134 +1,49 @@
-# StellarX Workshop Starter
+# STELLA Vault (Soroban Transparent Escrow Ledger for Localized Assets)
+STELLA Vault disrupts the over-saturated pool of generic digital lockboxes by transforming traditional Filipino paluwagan savings circles and remittance streams into a permissionless, No-KYC collaborative vault protocol built on Soroban smart contracts that instantly pegs micro-savings to stable USD assets.
 
-A ready-to-run scaffold for the **StellarX PH workshop @ PUP QC**. It gives you a
-working Stellar app on **testnet** so you can spend the workshop bending it toward
-your own idea instead of fighting setup.
+## Problem
+STELLA Vault addresses three critical financial challenges faced by many Filipinos. First, the identity document gap excludes over 40% of Filipino adults from accessing formal financial services due to the lack of government-issued IDs, proof of income, or the ability to maintain minimum account balances. STELLA Vault eliminates these bureaucratic barriers through a friction-free, No-KYC smart contract onboarding layer, making financial participation more accessible. Second, the erosion of purchasing power caused by inflation and domestic currency depreciation places micro-savers at significant financial risk when their funds are stored in cash or low-yield PHP accounts. To help preserve wealth, STELLA Vault democratizes access to stable USD-denominated reserve assets such as USDC. Finally, existing DeFi solutions are often complex, isolated, and designed for individual users, making them inaccessible and culturally disconnected from the needs of many communities. STELLA Vault reimagines decentralized savings infrastructure by providing a collaborative, culturally native framework that supports destination-based family remittances and collective community saving.
 
-It covers **both** workshop tracks:
+## How It Works
+Users can create personal or community-driven "smart vaults" to lock away stablecoins (like USDC) for specific life goals—such as emergency funds, tuition fees, or entrepreneurial capital—without worrying about inflation eroding their local currency or high traditional banking fees.
 
-- **Fullstack payments** — a Next.js app: connect Freighter → fund via Friendbot →
-  view XLM/USDC balances → send a payment → confirm on-chain.
-- **Soroban smart contract** — a small Rust contract (a *Savings Goal* tracker)
-  you build, test, deploy with the Stellar CLI, and call from the same frontend.
+## How It Uses Stellar
+- Soroban Smart Contracts (Rust): Powers the core collaborative and individual vault parameters. The contracts safely manage multi-user states, cryptographic asset locking, and deposit/withdrawal logic without requiring centralized ledgers.
+- Stellar Asset Contract (SAC): Utilizes native USDC on Stellar out of the box to guarantee hyper-low transaction fees, lightning-fast settlement, and immediate exposure to stable USD values.
+- Stellar Compliance & Anchor Architecture (SEP-24/SEP-6): Keeps the contract layer purely permissionless and No-KYC at entry, while shifting regulatory compliance entirely to the edge. Users interact freely on-chain in USD, but complete standard KYC checks only when interacting with regulated local off-ramps (like PeraHub or Coins.ph) to cash out into physical Philippine Peso (PHP) fiat.
 
-```
-.
-├── web/                      # Next.js 16 + TypeScript + Tailwind frontend
-├── contracts/savings-goal/   # Rust Soroban contract (init / contribute / get_state)
-├── scripts/                  # deploy.ps1 (Windows) / deploy.sh
-├── Cargo.toml                # Rust workspace
-└── CLAUDE.md                 # stack notes + Stellar gotchas (read this!)
-```
 
-## Prerequisites
+## Track
+[Which StellarX Philippines track this is submitted to]
 
-From the [workshop setup checklist](https://stellar-pup-qc-may-2026-checklist.vercel.app/):
+## Tech Stack
+- Framework: [Next.js / React / SvelteKit / ...]
+- Stellar SDK: @stellar/stellar-sdk v[version]
+- Network: [testnet / mainnet]
+- [other key dependencies]
 
-- **Node.js 20+** and **npm** — for the frontend.
-- **Freighter** browser extension — create a wallet, switch it to **Test Net**.
-- For the contract track: **Rust**, the `wasm32v1-none` target, and the **Stellar CLI**.
+## Setup & Run
+[Step-by-step. A judge must be able to run this from these instructions alone.]
 
-You can run the **payments demo with just Node + Freighter** — Rust/CLI are only
-needed to deploy the Soroban contract.
-
-### Install the contract toolchain (Windows)
-
-Install Rust and the Stellar CLI:
-
-```powershell
-winget install --id Rustlang.Rustup -e --accept-source-agreements --accept-package-agreements
-winget install --id Stellar.StellarCLI -e --accept-source-agreements --accept-package-agreements
-```
-
-Then **open a new terminal** (so `cargo`/`stellar` land on PATH) and give Rust a
-working linker — pick one:
-
-**Easiest — GNU toolchain** (no admin, no large download):
-
-```powershell
-rustup default stable-x86_64-pc-windows-gnu
-rustup target add wasm32v1-none
-```
-
-**Or MSVC** (matches Stellar's docs): install the **Visual C++ Build Tools** (the
-"Desktop development with C++" workload), then:
-
-```powershell
-rustup target add wasm32v1-none
-```
-
-> If `cargo` fails with *"linker `link.exe` not found"*, you skipped the step
-> above — use the GNU toolchain or install the Build Tools.
-
-On macOS/Linux: install Rust from <https://rustup.rs>, run
-`rustup target add wasm32v1-none`, and install the Stellar CLI
-(`brew install stellar-cli`).
-
-## 1. Run the frontend (the part that demos immediately)
-
-```powershell
-cd web
-npm install        # already run if you scaffolded via this repo
+\`\`\`bash
+git clone [your repo]
+cd [your project]
+npm install
+# environment variables needed:
+#   NEXT_PUBLIC_SOROBAN_RPC=...
+#   ...
 npm run dev
-```
+\`\`\`
 
-Open <http://localhost:3000>, then:
+## Network Details
+- Network: [testnet / mainnet]
+- RPC URL: [endpoint]
+- Contract IDs: [if any]
+- Asset issuers: [if any]
 
-1. **Connect Freighter** (approve in the extension; make sure it's on Test Net).
-2. **Fund with Friendbot** — your XLM balance jumps to ~10,000.
-3. **Send a payment** to another *existing, funded* testnet account
-   (create one at <https://laboratory.stellar.org/#account-creator?network=test>).
-4. Watch the status go Building → Signing → Submitting → Confirming → Success,
-   then open the **Stellar Expert** link to see it on-chain.
+## Team
+- [Name] — @[github-username]
+- ...
 
-`web/.env.local` is pre-filled with testnet config. `NEXT_PUBLIC_CONTRACT_ID` is
-left empty — the Savings Goal panel shows deploy instructions until you set it.
-
-## 2. Build, test & deploy the Soroban contract
-
-```powershell
-# from the repo root
-cargo test                 # runs the contract unit tests (no network needed)
-
-# deploy to testnet + auto-wire the contract ID into web/.env.local
-.\scripts\deploy.ps1       # macOS/Linux:  ./scripts/deploy.sh
-```
-
-The deploy script will: create+fund a testnet identity (if needed), run
-`stellar contract build`, deploy, initialise the goal (target `1000`), and write
-`NEXT_PUBLIC_CONTRACT_ID` into `web/.env.local`. **Restart `npm run dev`** and the
-**Savings Goal** panel goes live: it reads on-chain progress and lets a connected
-wallet `contribute` (a real signed Soroban transaction).
-
-### The contract (`contracts/savings-goal/src/lib.rs`)
-
-| Function | Purpose |
-|---|---|
-| `init(target: i128)` | Set the savings target (once). |
-| `contribute(amount: i128) -> i128` | Add to the saved total; returns the new total. |
-| `get_state() -> State` | Read `{ saved, target }`. |
-
-It uses plain integer state (no token transfers) so it's bulletproof in a live
-demo. To make it move real money, swap `contribute` to call the XLM/USDC SAC
-`transfer` and store per-user contributions — see CLAUDE.md for the SAC addresses.
-
-## 3. Make it your idea
-
-This is your *starting point*, not the answer. Pick an idea + track from the
-workshop's 300-ideas list (Philippines remittance / payments / financial
-inclusion themes score well), then reshape the components and the contract.
-Good extension paths: transaction history from Horizon, USDC trustline + send,
-a swap via Soroswap, a price feed via Reflector.
-
-For a fully worked example built on this scaffold, see the **Paluwagan** app in
-`..\Stellar-Workshop-PUP-May-2026-EXAMPLE`.
-
-## Troubleshooting
-
-- **Freighter "not detected"** — install it, reload the page, and confirm it's unlocked.
-- **Payment fails `op_no_destination`** — fund the destination account first.
-- **`tx_bad_auth`** — wrong network passphrase; this app uses `Networks.TESTNET`.
-- **Contract panel can't read state** — make sure you deployed *and* ran `init`,
-  and that `NEXT_PUBLIC_CONTRACT_ID` is set, then restart the dev server.
-
-See **CLAUDE.md** for the full list of Stellar gotchas.
+## License
+[MIT / Apache-2.0 / ...]
