@@ -8,12 +8,47 @@ import {
   nativeToScVal,
   scValToNative,
 } from '@stellar/stellar-sdk';
-import { server, NETWORK_PASSPHRASE, CONTRACT_ID } from './stellar';
+import { server, NETWORK_PASSPHRASE, CONTRACT_ID, USDC_ISSUER } from './stellar';
 
 // A real, funded testnet account used ONLY as the source for read-only
 // simulations. Nothing is signed or submitted for reads, so any existing
 // account works — we reuse the Circle USDC issuer.
 const READ_SOURCE = 'GBBD47IF6LWK7P7MDEVSCWR7DPUWV3NY3DTQEVFL4NAT4AQH3ZLLFLA5';
+
+export async function buildCreateVaultXDR(params: CreateVaultParams): Promise<string> {
+  const { creator, purpose, vaultType, goalAmount, lockUntil = 0 } = params;
+
+  const contract = new Contract(CONTRACT_ID);
+  const account = await server.getAccount(creator);
+
+  const tokenAddress = 
+    params.tokenAddress ?? new Asset('USDC', USDC_ISSUER).contractId(NETWORK_PASSPHRASE);
+
+  const tx = new TransactionBuilder(account, {
+    fee: BASE_FEE,
+    networkPassphrase: NETWORK_PASSPHRASE,
+  })
+    .addOperation(
+      contract.call(
+        'create_vault',
+        nativeToScVal(Address.fromString(creator), { type: 'address' }),
+        nativeToScVal(BigInt(Math.trunc(lockUntil)), { type: 'u64' }),
+        nativeToScVal(Address.fromString(tokenAddress), { type: 'address' }),
+        nativeToScVal(purpose, { type: 'string' }),
+        nativeToScVal({ tag: vaultType, values: undefined }, { type: 'instance' }),
+        nativeToScVal(BigInt(Math.trunc(goalAmount)), { type: 'i128' }),
+      ),
+    )
+    .setTimeout(30)
+    .build();
+
+  const sim = await server.simulateTransaction(tx);
+  if (!rpc.Api.isSimulationSuccess(sim)) {
+    throw new Error('Simulation failed — the create_vault call would not succeed.');
+  }
+
+  return rpc.assembleTransaction(tx, sim).build().toXDR();
+}
 
 export interface SavingsState {
   saved: number;
@@ -36,6 +71,20 @@ export interface VaultBalanceSummary {
 
 export function contractConfigured(): boolean {
   return Boolean(CONTRACT_ID);
+}
+
+export function resolveVaultId(value?: string | number | null): string {
+  const rawValue = typeof value === 'number' ? String(value) : value?.toString().trim();
+  if (rawValue && /^\d+$/.test(rawValue)) {
+    return rawValue;
+  }
+
+  const fromEnv = process.env.NEXT_PUBLIC_VAULT_ID?.trim() ?? process.env.NEXT_PUBLIC_CONTRACT_ID?.trim();
+  if (fromEnv && /^\d+$/.test(fromEnv)) {
+    return fromEnv;
+  }
+
+  return '1';
 }
 
 function toNumber(value: unknown): number {
@@ -82,41 +131,27 @@ async function readScVal(contractCall: string, args: Array<unknown> = []): Promi
   return scValToNative(sim.result.retval);
 }
 
-/** Read get_state() via simulation — no wallet or signature required. */
+/** Read the current vault balance and goal directly from the deployed vault. */
 export async function readSavingsState(): Promise<SavingsState> {
-  const contract = new Contract(CONTRACT_ID);
-  const source = new Account(READ_SOURCE, '0');
-
-  const tx = new TransactionBuilder(source, {
-    fee: BASE_FEE,
-    networkPassphrase: NETWORK_PASSPHRASE,
-  })
-    .addOperation(contract.call('get_state'))
-    .setTimeout(30)
-    .build();
-
-  const sim = await server.simulateTransaction(tx);
-  if (!rpc.Api.isSimulationSuccess(sim) || !sim.result) {
-    throw new Error('Could not read contract state. Is it deployed and initialised?');
+  const summary = await readVaultBalanceSummary(resolveVaultId());
+  if (!summary) {
+    return { saved: 0, target: 1 };
   }
 
-  const state = scValToNative(sim.result.retval) as {
-    saved: bigint;
-    target: bigint;
-  };
-  return { saved: Number(state.saved), target: Number(state.target) };
+  return { saved: summary.balance, target: summary.goalAmount };
 }
 
 export async function readVaultBalanceSummary(
   vaultId: string | number | null | undefined,
   address?: string | null,
 ): Promise<VaultBalanceSummary | null> {
-  if (!CONTRACT_ID || !vaultId) {
+  const resolvedVaultId = resolveVaultId(vaultId);
+  if (!CONTRACT_ID || !resolvedVaultId) {
     return null;
   }
 
   try {
-    const id = BigInt(vaultId);
+    const id = BigInt(resolvedVaultId);
     const vaultData = (await readScVal('get_vault', [nativeToScVal(id, { type: 'u64' })])) as Record<string, unknown>;
     const balance = toNumber(vaultData.balance);
     const goalAmount = Math.max(toNumber(vaultData.goal_amount), 1);
@@ -173,6 +208,7 @@ export async function buildContributeXDR(
 ): Promise<string> {
   const contract = new Contract(CONTRACT_ID);
   const account = await server.getAccount(sender);
+  const vaultId = resolveVaultId();
 
   const tx = new TransactionBuilder(account, {
     fee: BASE_FEE,
@@ -180,7 +216,9 @@ export async function buildContributeXDR(
   })
     .addOperation(
       contract.call(
-        'contribute',
+        'deposit',
+        nativeToScVal(Address.fromString(sender), { type: 'address' }),
+        nativeToScVal(BigInt(vaultId), { type: 'u64' }),
         nativeToScVal(BigInt(Math.trunc(amount)), { type: 'i128' }),
       ),
     )
@@ -189,19 +227,20 @@ export async function buildContributeXDR(
 
   const sim = await server.simulateTransaction(tx);
   if (!rpc.Api.isSimulationSuccess(sim)) {
-    throw new Error('Simulation failed — the contribute call would not succeed.');
+    throw new Error('Simulation failed — the deposit call would not succeed.');
   }
 
   return rpc.assembleTransaction(tx, sim).build().toXDR();
 }
 
-/** Build + simulate + assemble an unsigned `withdraw(amount)` invocation. */
+/** Build + simulate + assemble an unsigned `withdraw(...)` invocation. */
 export async function buildWithdrawXDR(
   sender: string,
   amount: number,
 ): Promise<string> {
   const contract = new Contract(CONTRACT_ID);
   const account = await server.getAccount(sender);
+  const vaultId = resolveVaultId();
 
   const tx = new TransactionBuilder(account, {
     fee: BASE_FEE,
@@ -210,6 +249,9 @@ export async function buildWithdrawXDR(
     .addOperation(
       contract.call(
         'withdraw',
+        nativeToScVal(Address.fromString(sender), { type: 'address' }),
+        nativeToScVal(BigInt(vaultId), { type: 'u64' }),
+        nativeToScVal(Address.fromString(sender), { type: 'address' }),
         nativeToScVal(BigInt(Math.trunc(amount)), { type: 'i128' }),
       ),
     )

@@ -6,6 +6,7 @@ import {
   contractConfigured,
   readSavingsState,
   readVaultBalanceSummary,
+  resolveVaultId,
   type SavingsState,
   type VaultBalanceSummary,
 } from '@/lib/contract';
@@ -190,7 +191,7 @@ export default function SavingsDashboard({ publicKey, onLogout }: DashboardProps
   const [transferAmount, setTransferAmount] = useState('');
 
   const loadVaultSummary = useCallback(async (address: string | null = publicKey) => {
-    const vaultId = process.env.NEXT_PUBLIC_VAULT_ID || process.env.NEXT_PUBLIC_CONTRACT_ID;
+    const vaultId = resolveVaultId();
     if (!configured || !vaultId) {
       setVaultSummary(null);
       return;
