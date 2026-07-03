@@ -23,6 +23,7 @@ import {
   type PendingTransferApproval,
 } from '@/lib/transfer';
 import { loadHistory, type HistoryEntry } from '@/lib/history';
+import { loadProfile, loadTrustScore, type UserProfile, type TrustScore } from '@/lib/auth/verification';
 
 interface DashboardProps {
   publicKey: string | null;
@@ -32,7 +33,7 @@ interface DashboardProps {
 type Panel = 'deposit' | 'withdraw' | 'receive' | null;
 type Tab = 'home' | 'send_tab' | 'activity' | 'profile';
 
-/* ---------- Custom UI SVGs From Mockup Design ---------- */
+/* ---------- Icons ---------- */
 
 function BellIcon({ className = '' }) {
   return (
@@ -97,7 +98,6 @@ function ActionIcon({ type }: { type: 'deposit' | 'withdraw' | 'send' | 'receive
   );
 }
 
-/* ---------- Bottom Navigation SVGs ---------- */
 function NavIcon({ type, active }: { type: Tab; active: boolean }) {
   const color = active ? '#6C5DD3' : '#A0AEC0';
   if (type === 'home') {
@@ -144,12 +144,8 @@ function entryVisual(kind: string) {
 }
 
 function safeNumber(value: unknown): number {
-  if (typeof value === 'number' && Number.isFinite(value)) {
-    return value;
-  }
-  if (typeof value === 'bigint') {
-    return Number(value);
-  }
+  if (typeof value === 'number' && Number.isFinite(value)) return value;
+  if (typeof value === 'bigint') return Number(value);
   if (typeof value === 'string') {
     const parsed = Number(value);
     return Number.isFinite(parsed) ? parsed : 0;
@@ -165,8 +161,11 @@ function formatCurrency(value: number): string {
   return `$${formatAmount(value)}`;
 }
 
+/* ---------- Component ---------- */
+
 export default function SavingsDashboard({ publicKey, onLogout }: DashboardProps) {
   const configured = contractConfigured();
+
   const [state, setState] = useState<SavingsState | null>(null);
   const [walletBalances, setWalletBalances] = useState<Balances | null>(null);
   const [vaultSummary, setVaultSummary] = useState<VaultBalanceSummary | null>(null);
@@ -182,20 +181,19 @@ export default function SavingsDashboard({ publicKey, onLogout }: DashboardProps
   const [transferState, setTransferState] = useState(getTransferState());
   const [history, setHistory] = useState<HistoryEntry[]>([]);
   const [copied, setCopied] = useState(false);
+  const [profile, setProfile] = useState<UserProfile | null>(null);
+  const [trust, setTrust] = useState<TrustScore | null>(null);
 
-  // Sliders, clamped to sensible boundaries, feed the real deposit/withdraw calls below.
   const [depositAmount, setDepositAmount] = useState('250');
   const [withdrawAmount, setWithdrawAmount] = useState('50');
   const [recipient, setRecipient] = useState('');
   const [transferAmount, setTransferAmount] = useState('');
 
+  /* ---------- Data loading ---------- */
+
   const loadVaultSummary = useCallback(async (address: string | null = publicKey) => {
     const vaultId = process.env.NEXT_PUBLIC_VAULT_ID || process.env.NEXT_PUBLIC_CONTRACT_ID;
-    if (!configured || !vaultId) {
-      setVaultSummary(null);
-      return;
-    }
-
+    if (!configured || !vaultId) { setVaultSummary(null); return; }
     setVaultSummaryLoading(true);
     try {
       setVaultSummary(await readVaultBalanceSummary(vaultId, address));
@@ -221,12 +219,60 @@ export default function SavingsDashboard({ publicKey, onLogout }: DashboardProps
   }, [configured, loadVaultSummary, publicKey]);
 
   const refreshHistory = useCallback(async (address: string | null) => {
-    if (!address) {
-      setHistory([]);
-      return;
-    }
+    if (!address) { setHistory([]); return; }
     setHistory(await loadHistory(address));
   }, []);
+
+  useEffect(() => {
+    setProfile(loadProfile());
+    setTrust(loadTrustScore());
+  }, []);
+
+  useEffect(() => {
+    if (!configured) return;
+    let ignore = false;
+    setLoading(true);
+    setError('');
+    readSavingsState()
+      .then((next) => { if (!ignore) setState(next); })
+      .catch((e: unknown) => { if (!ignore) setError(e instanceof Error ? e.message : 'Failed to read contract'); })
+      .finally(() => { if (!ignore) setLoading(false); });
+    return () => { ignore = true; };
+  }, [configured]);
+
+  useEffect(() => {
+    let ignore = false;
+    if (!publicKey) { setHistory([]); return; }
+    loadHistory(publicKey).then((data) => { if (!ignore) setHistory(data); });
+    return () => { ignore = true; };
+  }, [publicKey]);
+
+  useEffect(() => {
+    let ignore = false;
+    if (!publicKey) { setWalletBalances(null); return; }
+    fetchBalances(publicKey)
+      .then((b) => { if (!ignore) setWalletBalances(b); })
+      .catch(() => { if (!ignore) setWalletBalances(null); });
+    return () => { ignore = true; };
+  }, [publicKey]);
+
+  useEffect(() => {
+    let ignore = false;
+    if (!publicKey) { setVaultSummary(null); return; }
+    loadVaultSummary(publicKey).then(() => { }).catch(() => { });
+    return () => { ignore = true; };
+  }, [loadVaultSummary, publicKey]);
+
+  useEffect(() => subscribeToTransferState(() => setTransferState(getTransferState())), []);
+
+  useEffect(() => {
+    fetch('https://open.er-api.com/v6/latest/USD')
+      .then((r) => r.json())
+      .then((d) => { if (d?.rates?.PHP) setPhpRate(d.rates.PHP); })
+      .catch(() => { });
+  }, []);
+
+  /* ---------- Handlers ---------- */
 
   const handleLogout = () => {
     setPanel(null);
@@ -236,141 +282,10 @@ export default function SavingsDashboard({ publicKey, onLogout }: DashboardProps
     onLogout();
   };
 
-  useEffect(() => {
-    if (!configured) return;
-    let ignore = false;
-
-    Promise.resolve()
-      .then(() => {
-        if (ignore) return undefined;
-        setLoading(true);
-        setError('');
-        return readSavingsState();
-      })
-      .then((next) => {
-        if (!ignore && next !== undefined) setState(next);
-      })
-      .catch((e: unknown) => {
-        if (!ignore) setError(e instanceof Error ? e.message : 'Failed to read contract');
-      })
-      .finally(() => {
-        if (!ignore) setLoading(false);
-      });
-
-    return () => {
-      ignore = true;
-    };
-  }, [configured]);
-
-  useEffect(() => {
-    let ignore = false;
-
-    Promise.resolve()
-      .then(() => {
-        if (ignore) return undefined;
-        if (!publicKey) {
-          setHistory([]);
-          return undefined;
-        }
-        return loadHistory(publicKey);
-      })
-      .then((data) => {
-        if (!ignore && data !== undefined) setHistory(data);
-      });
-
-    return () => {
-      ignore = true;
-    };
-  }, [publicKey]);
-
-  useEffect(() => {
-    let ignore = false;
-
-    const run = async () => {
-      if (!publicKey) {
-        if (!ignore) {
-          setWalletBalances(null);
-        }
-        return;
-      }
-
-      try {
-        const balances = await fetchBalances(publicKey);
-        if (!ignore) {
-          setWalletBalances(balances);
-        }
-      } catch {
-        if (!ignore) {
-          setWalletBalances(null);
-        }
-      }
-    };
-
-    void run();
-
-    return () => {
-      ignore = true;
-    };
-  }, [publicKey]);
-
-  useEffect(() => {
-    let ignore = false;
-
-    const run = async () => {
-      if (!publicKey) {
-        if (!ignore) {
-          setVaultSummary(null);
-        }
-        return;
-      }
-
-      if (!ignore) {
-        await loadVaultSummary(publicKey);
-      }
-    };
-
-    void run();
-
-    return () => {
-      ignore = true;
-    };
-  }, [loadVaultSummary, publicKey]);
-
-  useEffect(() => {
-    return subscribeToTransferState(() => {
-      setTransferState(getTransferState());
-    });
-  }, []);
-
-  useEffect(() => {
-    fetch('https://open.er-api.com/v6/latest/USD')
-      .then((res) => res.json())
-      .then((data) => {
-        if (data?.rates?.PHP) {
-          setPhpRate(data.rates.PHP);
-        }
-      })
-      .catch(() => {});
-  }, []);
-
-  const pendingApproval = useMemo<PendingTransferApproval | null>(() => {
-    if (!publicKey) return null;
-    return getPendingTransferApprovalsForAddress(publicKey).find((item) => item.status !== 'submitted') ?? null;
-  }, [publicKey]);
-
-  const greeting = () => {
-    const hour = new Date().getHours();
-    if (hour < 12) return 'Good morning';
-    if (hour < 18) return 'Good afternoon';
-    return 'Good evening';
-  };
-
-  const identity = publicKey ? `${publicKey.slice(0, 4)}…${publicKey.slice(-4)}` : 'Guest';
-
   const togglePanel = (next: Panel) => {
     setError('');
     setMsg('');
-    setPanel((current) => (current === next ? null : next));
+    setPanel((cur) => (cur === next ? null : next));
   };
 
   const handleCopyAddress = async () => {
@@ -379,23 +294,14 @@ export default function SavingsDashboard({ publicKey, onLogout }: DashboardProps
       await navigator.clipboard.writeText(publicKey);
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
-    } catch {
-      // clipboard not available, ignore silently
-    }
+    } catch { }
   };
 
   const handleDeposit = async () => {
     if (!publicKey || !depositAmount || Number(depositAmount) <= 0) return;
-    setBusy(true);
-    setError('');
-    setMsg('');
+    setBusy(true); setError(''); setMsg('');
     try {
-      await depositUSDC(depositAmount, {
-        onCompleted: async () => {
-          await refresh();
-          await refreshHistory(publicKey);
-        },
-      });
+      await depositUSDC(depositAmount, { onCompleted: async () => { await refresh(); await refreshHistory(publicKey); } });
       setMsg('Contribution saved successfully!');
       setPanel(null);
     } catch (e: unknown) {
@@ -408,16 +314,9 @@ export default function SavingsDashboard({ publicKey, onLogout }: DashboardProps
 
   const handleWithdraw = async () => {
     if (!publicKey || !withdrawAmount || Number(withdrawAmount) <= 0) return;
-    setBusy(true);
-    setError('');
-    setMsg('');
+    setBusy(true); setError(''); setMsg('');
     try {
-      await withdrawUSDC(withdrawAmount, {
-        onCompleted: async () => {
-          await refresh();
-          await refreshHistory(publicKey);
-        },
-      });
+      await withdrawUSDC(withdrawAmount, { onCompleted: async () => { await refresh(); await refreshHistory(publicKey); } });
       setMsg('Withdrawal completed successfully!');
       setPanel(null);
     } catch (e: unknown) {
@@ -435,30 +334,30 @@ export default function SavingsDashboard({ publicKey, onLogout }: DashboardProps
     setError('');
   };
 
+  const pendingApproval = useMemo<PendingTransferApproval | null>(() => {
+    if (!publicKey) return null;
+    return getPendingTransferApprovalsForAddress(publicKey).find((item) => item.status !== 'submitted') ?? null;
+  }, [publicKey]);
+
   const handleApproveAsSender = () => {
     if (!pendingApproval || !publicKey || pendingApproval.sender !== publicKey) return;
-    if (updatePendingTransferApproval(pendingApproval.id, { senderAuthorized: true })) {
+    if (updatePendingTransferApproval(pendingApproval.id, { senderAuthorized: true }))
       setMsg('Sender approval recorded. Waiting for receiver approval.');
-    }
   };
 
   const handleApproveAsReceiver = () => {
     if (!pendingApproval || !publicKey || pendingApproval.recipient !== publicKey) return;
-    if (updatePendingTransferApproval(pendingApproval.id, { receiverAuthorized: true })) {
+    if (updatePendingTransferApproval(pendingApproval.id, { receiverAuthorized: true }))
       setMsg('Receiver approval recorded. The sender can now submit the transfer.');
-    }
   };
 
   const handleSubmitApprovedTransfer = async () => {
     if (!pendingApproval || !publicKey || pendingApproval.sender !== publicKey || !pendingApproval.senderAuthorized || !pendingApproval.receiverAuthorized) return;
-    setBusy(true);
-    setError('');
-    setMsg('');
+    setBusy(true); setError(''); setMsg('');
     try {
       await transferUSDC(pendingApproval.recipient, pendingApproval.amount, {
         onCompleted: async () => {
-          setRecipient('');
-          setTransferAmount('');
+          setRecipient(''); setTransferAmount('');
           removePendingTransferApproval(pendingApproval.id);
           await refreshHistory(publicKey);
         },
@@ -471,6 +370,8 @@ export default function SavingsDashboard({ publicKey, onLogout }: DashboardProps
       resetTransferState();
     }
   };
+
+  /* ---------- Derived values ---------- */
 
   if (!configured) {
     return (
@@ -494,16 +395,28 @@ export default function SavingsDashboard({ publicKey, onLogout }: DashboardProps
   const purchasingPowerSaved = walletUsdcBalance * (phpRate * 0.06);
   const recentPreview = history.slice(0, 3);
 
+  const greeting = () => {
+    const h = new Date().getHours();
+    if (h < 12) return 'Good morning';
+    if (h < 18) return 'Good afternoon';
+    return 'Good evening';
+  };
+
+  const identity = publicKey ? `${publicKey.slice(0, 4)}…${publicKey.slice(-4)}` : 'Guest';
+
+  /* ---------- Render ---------- */
+
   return (
     <div className="max-w-md mx-auto min-h-230 bg-[#F9F8FE] rounded-[3rem] overflow-hidden shadow-2xl relative flex flex-col justify-between font-sans border border-slate-100/80">
 
+      {/* Scrollable content area */}
       <div className="flex-1 pb-32 overflow-y-auto">
 
-        {/* Dynamic Background Organic Curves */}
+        {/* Background decoration */}
         <div className="absolute top-0 inset-x-0 h-80 bg-linear-to-b from-[#E7DCFC] via-[#F4EEFE] to-[#F9F8FE] -z-10 pointer-events-none opacity-80" />
         <div className="absolute top-10 -right-5 w-64 h-64 rounded-full bg-white/60 blur-3xl -z-10 pointer-events-none" />
 
-        {/* Header Ribbon Bar */}
+        {/* Header */}
         <div className="px-6 pt-8 flex justify-between items-center">
           <div className="flex items-center gap-2">
             <div className="w-2.5 h-2.5 bg-[#6C5DD3] rounded-full animate-pulse" />
@@ -514,9 +427,9 @@ export default function SavingsDashboard({ publicKey, onLogout }: DashboardProps
           </div>
         </div>
 
+        {/* ── HOME TAB ── */}
         {activeTab === 'home' && (
           <>
-            {/* User Workspace Greeting */}
             <div className="px-6 mt-6">
               <p className="text-sm font-semibold text-slate-500">{greeting()},</p>
               <h2 className="text-3xl font-black text-slate-800 tracking-tight flex items-center gap-2 mt-0.5">
@@ -524,11 +437,8 @@ export default function SavingsDashboard({ publicKey, onLogout }: DashboardProps
               </h2>
             </div>
 
-            {/* Interactive Master Balance Card Frame */}
+            {/* Balance card */}
             <div className="mx-4 mt-6 p-6 rounded-[2.5rem] bg-white border border-white/60 shadow-xl shadow-indigo-950/5 relative overflow-hidden">
-              <div className="absolute right-4 bottom-16 opacity-90 pointer-events-none select-none">
-              </div>
-
               <div className="space-y-1 relative">
                 <div className="flex items-center gap-2 text-xs font-bold text-slate-400 uppercase tracking-wider">
                   <span>Available wallet USDC</span>
@@ -555,6 +465,7 @@ export default function SavingsDashboard({ publicKey, onLogout }: DashboardProps
                 </div>
               </div>
 
+              {/* Action buttons */}
               <div className="grid grid-cols-4 gap-2 mt-6 relative">
                 <button onClick={() => togglePanel('deposit')} className="flex flex-col items-center gap-2">
                   <div className={`w-12 h-12 rounded-2xl transition-colors flex items-center justify-center border ${panel === 'deposit' ? 'bg-[#FFF0DC] border-orange-200' : 'bg-[#FFF7EE] hover:bg-[#FFEED9] border-orange-100'}`}>
@@ -562,21 +473,18 @@ export default function SavingsDashboard({ publicKey, onLogout }: DashboardProps
                   </div>
                   <span className="text-xs font-bold text-slate-600">Deposit</span>
                 </button>
-
                 <button onClick={() => togglePanel('withdraw')} disabled={!publicKey} className="flex flex-col items-center gap-2 disabled:opacity-40">
                   <div className={`w-12 h-12 rounded-2xl transition-colors flex items-center justify-center border ${panel === 'withdraw' ? 'bg-[#EAE4FF] border-violet-200' : 'bg-[#F3F0FF] hover:bg-[#EAE4FF] border-violet-100'}`}>
                     <ActionIcon type="withdraw" />
                   </div>
                   <span className="text-xs font-bold text-slate-600">Withdraw</span>
                 </button>
-
                 <button onClick={() => { setPanel(null); setActiveTab('send_tab'); }} disabled={!publicKey} className="flex flex-col items-center gap-2 disabled:opacity-40">
                   <div className="w-12 h-12 rounded-2xl bg-[#F3F0FF] hover:bg-[#EAE4FF] transition-colors flex items-center justify-center border border-violet-100">
                     <ActionIcon type="send" />
                   </div>
                   <span className="text-xs font-bold text-slate-600">Send</span>
                 </button>
-
                 <button onClick={() => togglePanel('receive')} disabled={!publicKey} className="flex flex-col items-center gap-2 disabled:opacity-40">
                   <div className={`w-12 h-12 rounded-2xl transition-colors flex items-center justify-center border ${panel === 'receive' ? 'bg-[#EAE4FF] border-violet-200' : 'bg-[#F3F0FF] hover:bg-[#EAE4FF] border-violet-100'}`}>
                     <ActionIcon type="receive" />
@@ -597,42 +505,41 @@ export default function SavingsDashboard({ publicKey, onLogout }: DashboardProps
                 </div>
               )}
 
+              {/* Deposit panel */}
               {panel === 'deposit' && (
                 <div className="mt-4 p-4 bg-[#FAF8FF] border border-violet-100 rounded-3xl space-y-3">
                   <div className="flex justify-between items-center text-xs font-bold">
                     <span className="text-slate-400 uppercase">Slide to deposit</span>
                     <span className="text-[#6C5DD3] font-mono">{depositAmount} USDC</span>
                   </div>
-                  <input
-                    type="range" min="0" max="2000" step="10" value={depositAmount}
-                    onChange={(e) => setDepositAmount(e.target.value)}
-                    disabled={busy}
-                    className="w-full h-2 bg-slate-100 rounded-lg appearance-none cursor-pointer accent-[#6C5DD3] disabled:opacity-50"
-                  />
-                  <button onClick={handleDeposit} disabled={busy || loading} className="w-full py-2.5 rounded-xl bg-[#6C5DD3] text-white text-xs font-bold disabled:opacity-50">
+                  <input type="range" min="0" max="2000" step="10" value={depositAmount}
+                    onChange={(e) => setDepositAmount(e.target.value)} disabled={busy}
+                    className="w-full h-2 bg-slate-100 rounded-lg appearance-none cursor-pointer accent-[#6C5DD3] disabled:opacity-50" />
+                  <button onClick={handleDeposit} disabled={busy || loading}
+                    className="w-full py-2.5 rounded-xl bg-[#6C5DD3] text-white text-xs font-bold disabled:opacity-50">
                     {busy ? 'Processing…' : 'Confirm deposit'}
                   </button>
                 </div>
               )}
 
+              {/* Withdraw panel */}
               {panel === 'withdraw' && (
                 <div className="mt-4 p-4 bg-[#FAF8FF] border border-violet-100 rounded-3xl space-y-3">
                   <div className="flex justify-between items-center text-xs font-bold">
                     <span className="text-slate-400 uppercase">Slide to withdraw</span>
                     <span className="text-[#6C5DD3] font-mono">{withdrawAmount} USDC</span>
                   </div>
-                  <input
-                    type="range" min="0" max={Math.max(2000, Math.round(usdcBalance))} step="10" value={withdrawAmount}
-                    onChange={(e) => setWithdrawAmount(e.target.value)}
-                    disabled={busy}
-                    className="w-full h-2 bg-slate-100 rounded-lg appearance-none cursor-pointer accent-[#6C5DD3] disabled:opacity-50"
-                  />
-                  <button onClick={handleWithdraw} disabled={busy || loading} className="w-full py-2.5 rounded-xl bg-white border border-[#6C5DD3] text-[#6C5DD3] text-xs font-bold disabled:opacity-50">
+                  <input type="range" min="0" max={Math.max(2000, Math.round(usdcBalance))} step="10" value={withdrawAmount}
+                    onChange={(e) => setWithdrawAmount(e.target.value)} disabled={busy}
+                    className="w-full h-2 bg-slate-100 rounded-lg appearance-none cursor-pointer accent-[#6C5DD3] disabled:opacity-50" />
+                  <button onClick={handleWithdraw} disabled={busy || loading}
+                    className="w-full py-2.5 rounded-xl bg-white border border-[#6C5DD3] text-[#6C5DD3] text-xs font-bold disabled:opacity-50">
                     {busy ? 'Processing…' : 'Confirm withdrawal'}
                   </button>
                 </div>
               )}
 
+              {/* Receive panel */}
               {panel === 'receive' && publicKey && (
                 <div className="mt-4 p-4 bg-[#FAF8FF] border border-violet-100 rounded-3xl space-y-3">
                   <p className="text-xs font-bold text-slate-400 uppercase">Your vault address</p>
@@ -644,43 +551,28 @@ export default function SavingsDashboard({ publicKey, onLogout }: DashboardProps
               )}
             </div>
 
+            {/* Balance overview */}
             <div className="px-5 mt-8 space-y-3">
               <div className="flex justify-between items-center">
                 <h3 className="text-lg font-black text-slate-800 tracking-tight">Balance overview</h3>
                 <span className="text-[10px] font-black uppercase tracking-[0.24em] text-[#6C5DD3]">Live</span>
               </div>
-
               <div className="grid grid-cols-2 gap-3">
-                <div className="rounded-3xl border border-violet-100 bg-white p-4 shadow-sm">
-                  <p className="text-[10px] font-black uppercase tracking-[0.24em] text-slate-400">Wallet USDC</p>
-                  <p className="mt-2 text-2xl font-black text-slate-800">
-                    {walletBalances ? formatCurrency(walletUsdcBalance) : '—'}
-                  </p>
-                  <p className="mt-1 text-[11px] font-semibold text-slate-400">Available for deposits</p>
-                </div>
-                <div className="rounded-3xl border border-violet-100 bg-white p-4 shadow-sm">
-                  <p className="text-[10px] font-black uppercase tracking-[0.24em] text-slate-400">Vault balance</p>
-                  <p className="mt-2 text-2xl font-black text-slate-800">
-                    {vaultSummaryLoading ? '…' : formatCurrency(usdcBalance)}
-                  </p>
-                  <p className="mt-1 text-[11px] font-semibold text-slate-400">Saved in the vault</p>
-                </div>
-                <div className="rounded-3xl border border-violet-100 bg-white p-4 shadow-sm">
-                  <p className="text-[10px] font-black uppercase tracking-[0.24em] text-slate-400">My contribution</p>
-                  <p className="mt-2 text-2xl font-black text-slate-800">
-                    {vaultSummaryLoading ? '…' : formatCurrency(safeNumber(vaultSummary?.contribution))}
-                  </p>
-                  <p className="mt-1 text-[11px] font-semibold text-slate-400">Your share so far</p>
-                </div>
-                <div className="rounded-3xl border border-violet-100 bg-white p-4 shadow-sm">
-                  <p className="text-[10px] font-black uppercase tracking-[0.24em] text-slate-400">Withdrawable</p>
-                  <p className="mt-2 text-2xl font-black text-slate-800">
-                    {vaultSummaryLoading ? '…' : formatCurrency(safeNumber(vaultSummary?.withdrawable))}
-                  </p>
-                  <p className="mt-1 text-[11px] font-semibold text-slate-400">Based on lock and goal rules</p>
-                </div>
+                {[
+                  { label: 'Wallet USDC', value: walletBalances ? formatCurrency(walletUsdcBalance) : '—', sub: 'Available for deposits' },
+                  { label: 'Vault balance', value: vaultSummaryLoading ? '…' : formatCurrency(usdcBalance), sub: 'Saved in the vault' },
+                  { label: 'My contribution', value: vaultSummaryLoading ? '…' : formatCurrency(safeNumber(vaultSummary?.contribution)), sub: 'Your share so far' },
+                  { label: 'Withdrawable', value: vaultSummaryLoading ? '…' : formatCurrency(safeNumber(vaultSummary?.withdrawable)), sub: 'Based on lock and goal rules' },
+                ].map((c) => (
+                  <div key={c.label} className="rounded-3xl border border-violet-100 bg-white p-4 shadow-sm">
+                    <p className="text-[10px] font-black uppercase tracking-[0.24em] text-slate-400">{c.label}</p>
+                    <p className="mt-2 text-2xl font-black text-slate-800">{c.value}</p>
+                    <p className="mt-1 text-[11px] font-semibold text-slate-400">{c.sub}</p>
+                  </div>
+                ))}
               </div>
 
+              {/* Vault progress */}
               <div className="rounded-4xl border border-violet-100 bg-white p-4 shadow-sm">
                 <div className="flex items-start justify-between gap-3">
                   <div>
@@ -698,12 +590,11 @@ export default function SavingsDashboard({ publicKey, onLogout }: DashboardProps
                   <span>Goal: {formatCurrency(vaultGoal)}</span>
                   <span>Need: {formatCurrency(vaultRemaining)}</span>
                 </div>
-                {vaultSummary && (
+                {vaultSummary ? (
                   <p className="mt-3 text-[11px] font-semibold text-slate-400">
                     {vaultSummary.status} · {vaultSummary.vaultType} · {vaultSummary.lockLabel}
                   </p>
-                )}
-                {!vaultSummary && !vaultSummaryLoading && (
+                ) : !vaultSummaryLoading && (
                   <p className="mt-3 text-[11px] font-semibold text-slate-400">
                     Add a vault id to surface on-chain vault balance, contribution, and goal progress here.
                   </p>
@@ -711,39 +602,37 @@ export default function SavingsDashboard({ publicKey, onLogout }: DashboardProps
               </div>
             </div>
 
-            {/* Recent Activity preview */}
+            {/* Recent activity */}
             <div className="px-5 mt-8">
               <div className="flex justify-between items-center">
                 <h3 className="text-lg font-black text-slate-800 tracking-tight">Recent activity</h3>
                 <button onClick={() => setActiveTab('activity')} className="text-xs font-bold text-[#6C5DD3] hover:underline">View all</button>
               </div>
-
               <div className="mt-4 space-y-3">
                 {recentPreview.length === 0 ? (
                   <p className="p-4 rounded-4xl bg-white border border-slate-50 shadow-md shadow-indigo-950/2 text-sm text-slate-400">
                     Your deposits, withdrawals, and transfers will appear here.
                   </p>
-                ) : (
-                  recentPreview.map((entry) => {
-                    const v = entryVisual(entry.kind);
-                    return (
-                      <div key={entry.id} className="p-4 rounded-4xl bg-white border border-slate-50 shadow-md shadow-indigo-950/2 flex items-center gap-4">
-                        <div className={`w-12 h-12 rounded-full ${v.bg} ${v.fg} flex items-center justify-center shrink-0 font-black shadow-inner`}>{v.icon}</div>
-                        <div className="flex-1 min-w-0">
-                          <h4 className="font-black text-sm text-slate-800 truncate">{entry.title}</h4>
-                          <p className="text-[11px] text-slate-400 truncate">{entry.description}</p>
-                        </div>
-                        <div className="text-right shrink-0">
-                          <span className="text-xs font-black text-slate-800">{entry.amount.toFixed(2)} {entry.asset}</span>
-                          <p className="text-[10px] text-slate-300 font-mono">{new Date(entry.timestamp).toLocaleDateString()}</p>
-                        </div>
+                ) : recentPreview.map((entry) => {
+                  const v = entryVisual(entry.kind);
+                  return (
+                    <div key={entry.id} className="p-4 rounded-4xl bg-white border border-slate-50 shadow-md shadow-indigo-950/2 flex items-center gap-4">
+                      <div className={`w-12 h-12 rounded-full ${v.bg} ${v.fg} flex items-center justify-center shrink-0 font-black shadow-inner`}>{v.icon}</div>
+                      <div className="flex-1 min-w-0">
+                        <h4 className="font-black text-sm text-slate-800 truncate">{entry.title}</h4>
+                        <p className="text-[11px] text-slate-400 truncate">{entry.description}</p>
                       </div>
-                    );
-                  })
-                )}
+                      <div className="text-right shrink-0">
+                        <span className="text-xs font-black text-slate-800">{entry.amount.toFixed(2)} {entry.asset}</span>
+                        <p className="text-[10px] text-slate-300 font-mono">{new Date(entry.timestamp).toLocaleDateString()}</p>
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
             </div>
 
+            {/* Banner */}
             <div className="mx-4 mt-6 overflow-hidden rounded-4xl bg-linear-to-br from-[#E8DDFF] via-[#F4EEFF] to-[#E3D7FF] p-5 border border-white/60 shadow-sm relative">
               <div className="absolute right-0 -bottom-2.5 opacity-40 pointer-events-none">
                 <span className="text-6xl">🪴</span>
@@ -758,6 +647,7 @@ export default function SavingsDashboard({ publicKey, onLogout }: DashboardProps
           </>
         )}
 
+        {/* ── SEND TAB ── */}
         {activeTab === 'send_tab' && (
           <div className="px-5 mt-6">
             <h3 className="text-lg font-black text-slate-800 tracking-tight">Send USDC</h3>
@@ -773,29 +663,26 @@ export default function SavingsDashboard({ publicKey, onLogout }: DashboardProps
                     {msg && <p className="flex items-center gap-1 text-xs font-semibold text-emerald-500"><SparkleStar className="w-3 h-3" />{msg}</p>}
                   </div>
                 )}
-
                 {!pendingApproval && (
                   <>
                     <div className="space-y-2">
                       <label className="block text-xs font-bold uppercase tracking-wide text-slate-400">Recipient address</label>
-                      <input
-                        type="text" value={recipient} onChange={(e) => setRecipient(e.target.value)} placeholder="GB..." disabled={busy}
-                        className="w-full rounded-xl border border-violet-100 bg-[#FAF8FF] px-3 py-2.5 text-sm text-slate-800 placeholder-slate-300 focus:outline-none focus:border-[#6C5DD3] disabled:opacity-50"
-                      />
+                      <input type="text" value={recipient} onChange={(e) => setRecipient(e.target.value)}
+                        placeholder="GB..." disabled={busy}
+                        className="w-full rounded-xl border border-violet-100 bg-[#FAF8FF] px-3 py-2.5 text-sm text-slate-800 placeholder-slate-300 focus:outline-none focus:border-[#6C5DD3] disabled:opacity-50" />
                     </div>
                     <div className="space-y-2">
                       <label className="block text-xs font-bold uppercase tracking-wide text-slate-400">Amount (USDC)</label>
-                      <input
-                        type="number" value={transferAmount} onChange={(e) => setTransferAmount(e.target.value)} placeholder="0.00" disabled={busy}
-                        className="w-full rounded-xl border border-violet-100 bg-[#FAF8FF] px-3 py-2.5 text-sm text-slate-800 placeholder-slate-300 focus:outline-none focus:border-[#6C5DD3] disabled:opacity-50"
-                      />
+                      <input type="number" value={transferAmount} onChange={(e) => setTransferAmount(e.target.value)}
+                        placeholder="0.00" disabled={busy}
+                        className="w-full rounded-xl border border-violet-100 bg-[#FAF8FF] px-3 py-2.5 text-sm text-slate-800 placeholder-slate-300 focus:outline-none focus:border-[#6C5DD3] disabled:opacity-50" />
                     </div>
-                    <button onClick={handleTransferRequest} disabled={!recipient || !transferAmount || busy} className="w-full py-3 rounded-xl bg-[#6C5DD3] text-white text-sm font-bold disabled:opacity-50">
+                    <button onClick={handleTransferRequest} disabled={!recipient || !transferAmount || busy}
+                      className="w-full py-3 rounded-xl bg-[#6C5DD3] text-white text-sm font-bold disabled:opacity-50">
                       {busy ? 'Processing…' : 'Start approval flow'}
                     </button>
                   </>
                 )}
-
                 {pendingApproval && (
                   <div className="space-y-3 rounded-2xl border border-violet-100 bg-[#FAF8FF] p-3 text-xs text-slate-600">
                     <div className="flex items-center justify-between">
@@ -825,6 +712,7 @@ export default function SavingsDashboard({ publicKey, onLogout }: DashboardProps
           </div>
         )}
 
+        {/* ── ACTIVITY TAB ── */}
         {activeTab === 'activity' && (
           <div className="px-5 mt-6">
             <div className="flex items-center justify-between">
@@ -838,44 +726,111 @@ export default function SavingsDashboard({ publicKey, onLogout }: DashboardProps
                 <p className="p-4 rounded-4xl bg-white border border-slate-50 shadow-md shadow-indigo-950/2 text-sm text-slate-400">
                   Your deposits, withdrawals, and transfers will appear here.
                 </p>
-              ) : (
-                history.map((entry) => {
-                  const v = entryVisual(entry.kind);
-                  return (
-                    <div key={entry.id} className="p-4 rounded-4xl bg-white border border-slate-50 shadow-md shadow-indigo-950/2 flex items-center gap-4">
-                      <div className={`w-12 h-12 rounded-full ${v.bg} ${v.fg} flex items-center justify-center shrink-0 font-black shadow-inner`}>{v.icon}</div>
-                      <div className="flex-1 min-w-0">
-                        <h4 className="font-black text-sm text-slate-800 truncate">{entry.title}</h4>
-                        <p className="text-[11px] text-slate-400 truncate">{entry.description}</p>
-                      </div>
-                      <div className="text-right shrink-0">
-                        <span className="text-xs font-black text-slate-800">{entry.amount.toFixed(2)} {entry.asset}</span>
-                        <p className="text-[10px] text-slate-300 font-mono">{new Date(entry.timestamp).toLocaleString()}</p>
-                      </div>
+              ) : history.map((entry) => {
+                const v = entryVisual(entry.kind);
+                return (
+                  <div key={entry.id} className="p-4 rounded-4xl bg-white border border-slate-50 shadow-md shadow-indigo-950/2 flex items-center gap-4">
+                    <div className={`w-12 h-12 rounded-full ${v.bg} ${v.fg} flex items-center justify-center shrink-0 font-black shadow-inner`}>{v.icon}</div>
+                    <div className="flex-1 min-w-0">
+                      <h4 className="font-black text-sm text-slate-800 truncate">{entry.title}</h4>
+                      <p className="text-[11px] text-slate-400 truncate">{entry.description}</p>
                     </div>
-                  );
-                })
-              )}
+                    <div className="text-right shrink-0">
+                      <span className="text-xs font-black text-slate-800">{entry.amount.toFixed(2)} {entry.asset}</span>
+                      <p className="text-[10px] text-slate-300 font-mono">{new Date(entry.timestamp).toLocaleString()}</p>
+                    </div>
+                  </div>
+                );
+              })}
             </div>
           </div>
         )}
 
+        {/* ── PROFILE TAB ── */}
         {activeTab === 'profile' && (
-          <div className="px-5 mt-6">
+          <div className="px-5 mt-6 space-y-4">
             <h3 className="text-lg font-black text-slate-800 tracking-tight">Profile</h3>
-            <div className="mt-4 p-5 rounded-3xl bg-white border border-violet-100 shadow-md shadow-indigo-950/2 space-y-3">
-              <div>
-                <p className="text-xs font-bold uppercase tracking-wide text-slate-400">Wallet address</p>
-                {publicKey ? (
-                  <p className="mt-1 break-all rounded-xl border border-violet-100 bg-[#FAF8FF] px-3 py-2.5 font-mono text-xs text-slate-700">{publicKey}</p>
-                ) : (
-                  <p className="mt-1 text-sm text-slate-400">No wallet connected.</p>
+
+            {/* Avatar + name */}
+            <div className="p-5 rounded-3xl bg-white border border-violet-100 shadow-md shadow-indigo-950/5">
+              <div className="flex items-center gap-4">
+                <div className="w-14 h-14 rounded-2xl bg-[#6C5DD3]/10 flex items-center justify-center text-2xl font-black text-[#6C5DD3]">
+                  {profile?.displayName?.charAt(0).toUpperCase() ?? '?'}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="font-black text-slate-800 text-base truncate">
+                    {profile?.displayName ?? 'Unknown'}
+                  </p>
+                  <p className="text-[11px] text-slate-400 font-medium mt-0.5">
+                    {profile?.country ?? '—'}
+                  </p>
+                  <span className={`inline-flex items-center gap-1.5 mt-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wide ${
+                    profile?.verificationLevel === 2 ? 'bg-emerald-50 text-emerald-700' :
+                    profile?.verificationLevel === 1 ? 'bg-amber-50 text-amber-700' :
+                    'bg-violet-50 text-[#6C5DD3]'
+                  }`}>
+                    <span className={`w-1.5 h-1.5 rounded-full ${
+                      profile?.verificationLevel === 2 ? 'bg-emerald-500' :
+                      profile?.verificationLevel === 1 ? 'bg-amber-400' :
+                      'bg-[#6C5DD3]'
+                    }`} />
+                    Level {profile?.verificationLevel ?? 0} —{' '}
+                    {profile?.verificationLevel === 2 ? 'Verified' :
+                     profile?.verificationLevel === 1 ? 'Enhanced' : 'Basic'}
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            {/* Trust score */}
+            {trust && (
+              <div className="p-5 rounded-3xl bg-white border border-violet-100 shadow-md shadow-indigo-950/5 space-y-3">
+                <div className="flex items-center justify-between">
+                  <p className="text-xs font-bold uppercase tracking-wide text-slate-400">Trust score</p>
+                  <span className="text-lg font-black text-slate-800">
+                    {trust.score}<span className="text-xs text-slate-400 font-semibold">/100</span>
+                  </span>
+                </div>
+                <div className="h-2 bg-violet-50 rounded-full overflow-hidden">
+                  <div className="h-full bg-[#6C5DD3] rounded-full transition-all duration-500" style={{ width: `${trust.score}%` }} />
+                </div>
+                <div className="grid grid-cols-2 gap-2">
+                  {[
+                    { label: 'On-time deposits', value: trust.onTimeDeposits, icon: '⚡' },
+                    { label: 'Group vaults', value: trust.collaborativeVaults, icon: '🤝' },
+                    { label: 'Goals completed', value: trust.savingsGoalsCompleted, icon: '✅' },
+                    { label: 'Months active', value: trust.accountAgeMonths, icon: '🕐' },
+                  ].map((s) => (
+                    <div key={s.label} className="bg-[#FAF8FF] rounded-2xl px-3 py-2.5">
+                      <p className="text-base">{s.icon}</p>
+                      <p className="text-sm font-black text-slate-800 mt-0.5">{s.value}</p>
+                      <p className="text-[10px] text-slate-400 font-medium leading-tight">{s.label}</p>
+                    </div>
+                  ))}
+                </div>
+                {trust.disputes > 0 && (
+                  <p className="text-[11px] text-rose-500 font-semibold bg-rose-50 rounded-xl px-3 py-2">
+                    ⚠️ {trust.disputes} dispute{trust.disputes > 1 ? 's' : ''} on record
+                  </p>
                 )}
               </div>
-              {publicKey && (
-                <button onClick={handleCopyAddress} className="w-full py-2.5 rounded-xl bg-[#6C5DD3] text-white text-xs font-bold">
-                  {copied ? 'Copied!' : 'Copy address'}
-                </button>
+            )}
+
+            {/* Wallet address */}
+            <div className="p-5 rounded-3xl bg-white border border-violet-100 shadow-md shadow-indigo-950/5 space-y-3">
+              <p className="text-xs font-bold uppercase tracking-wide text-slate-400">Stellar address</p>
+              {publicKey ? (
+                <>
+                  <p className="break-all rounded-xl border border-violet-100 bg-[#FAF8FF] px-3 py-2.5 font-mono text-xs text-slate-700">
+                    {publicKey}
+                  </p>
+                  <button onClick={handleCopyAddress}
+                    className="w-full py-2.5 rounded-xl bg-[#6C5DD3] text-white text-xs font-bold hover:bg-[#5B4DC7] transition-colors">
+                    {copied ? '✓ Copied!' : 'Copy address'}
+                  </button>
+                </>
+              ) : (
+                <p className="text-sm text-slate-400">No wallet connected.</p>
               )}
               <div className="pt-2 border-t border-violet-50 flex justify-between text-xs text-slate-500">
                 <span>Live forex rate</span>
@@ -883,19 +838,51 @@ export default function SavingsDashboard({ publicKey, onLogout }: DashboardProps
               </div>
             </div>
 
-            {publicKey && (
-              <button
-                onClick={handleLogout}
-                className="mt-4 w-full py-3 rounded-xl bg-white border border-rose-200 text-rose-500 text-sm font-bold hover:bg-rose-50 transition-colors"
-              >
-                Log out
-              </button>
-            )}
+            {/* Verification levels */}
+            <div className="p-5 rounded-3xl bg-white border border-violet-100 shadow-md shadow-indigo-950/5 space-y-2">
+              <p className="text-xs font-bold uppercase tracking-wide text-slate-400 mb-3">Verification</p>
+              {([0, 1, 2] as const).map((lvl) => {
+                const isActive = (profile?.verificationLevel ?? 0) >= lvl;
+                const isCurrent = (profile?.verificationLevel ?? 0) === lvl;
+                const labels = ['Basic', 'Enhanced', 'Verified'];
+                const descriptions = [
+                  'Create vaults · Receive USDC',
+                  'Higher limits · Verified badge',
+                  'Cash out to PHP · Bank withdrawal',
+                ];
+                return (
+                  <div key={lvl} className={`rounded-2xl px-4 py-3 border transition-all ${
+                    isCurrent ? 'border-violet-200 bg-violet-50' :
+                    isActive ? 'border-emerald-100 bg-emerald-50/50' :
+                    'border-slate-100 bg-slate-50 opacity-60'
+                  }`}>
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-black text-slate-700">Level {lvl} — {labels[lvl]}</span>
+                      {isActive ? (
+                        <span className="text-[10px] font-bold text-emerald-600">✓ Active</span>
+                      ) : (
+                        <button className="text-[10px] font-bold text-[#6C5DD3]">Upgrade →</button>
+                      )}
+                    </div>
+                    <p className="text-[10px] text-slate-400 mt-0.5">{descriptions[lvl]}</p>
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Lock vault */}
+            <button
+              onClick={handleLogout}
+              className="w-full py-3 rounded-xl bg-white border border-rose-200 text-rose-500 text-sm font-bold hover:bg-rose-50 transition-colors"
+            >
+              🚪 Log Out
+            </button>
           </div>
         )}
-      </div>
 
-      {/* Bottom Navigation */}
+      </div>{/* ← closes flex-1 scrollable area */}
+
+      {/* ── BOTTOM NAV ── */}
       <div className="absolute bottom-0 inset-x-0 bg-white/90 backdrop-blur-md border-t border-slate-100/80 px-4 pt-3 pb-7 flex justify-between items-center rounded-t-[2.5rem] shadow-xl shadow-slate-950/20 z-40">
         {(['home', 'send_tab', 'activity', 'profile'] as Tab[]).map((tab) => {
           const isSelected = activeTab === tab;
@@ -914,6 +901,7 @@ export default function SavingsDashboard({ publicKey, onLogout }: DashboardProps
           );
         })}
       </div>
+
     </div>
   );
 }

@@ -32,6 +32,7 @@ export default function Home() {
   const { publicKey, connecting, status, network, provider, signerAvailable, error, disconnect, initialized } = wallet;
   const [refreshKey, setRefreshKey] = useState(0);
   const [authChecked, setAuthChecked] = useState(false);
+  const [authFailed, setAuthFailed] = useState(false);
   const refresh = useCallback(() => setRefreshKey((k) => k + 1), []);
 
 // ── Auth gate ──────────────────────────────────────────────
@@ -50,12 +51,11 @@ export default function Home() {
       return;
     }
 
-    // Safety net: if wallet never finishes hydrating within 3s, don't hang forever
     const timeout = setTimeout(() => {
       if (!wallet.publicKey || !wallet.signerAvailable) {
         router.replace('/login');
       }
-    }, 100);
+    }, 3000);
 
     return () => clearTimeout(timeout);
   }, [
@@ -74,7 +74,18 @@ export default function Home() {
   }, [disconnect, router]);
 
   // Don't flash the dashboard while checking auth
-  if (!authChecked) return null;
+  if (!authChecked) {
+    return (
+      <main className="min-h-screen w-full bg-[#FAF6F0] flex items-center justify-center">
+        <div className="flex flex-col items-center gap-3">
+          <div className="h-8 w-8 animate-spin rounded-full border-2 border-[#6C5DD3] border-t-transparent" />
+          <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">
+            Checking session…
+          </p>
+        </div>
+      </main>
+    );
+  }
 
   return (
     <main className="min-h-screen w-full bg-[#FAF6F0] text-slate-800 antialiased selection:bg-[#6C5DD3]/10">
