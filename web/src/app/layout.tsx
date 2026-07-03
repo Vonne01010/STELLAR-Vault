@@ -13,8 +13,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "StellarX Starter — PUP Workshop",
-  description: "Wallet, payments, and a Soroban contract on Stellar testnet.",
+  title: "STELLA Vault",
+  description: "Soroban Transparent Escrow Ledger for Localized Assets",
 };
 
 export default function RootLayout({

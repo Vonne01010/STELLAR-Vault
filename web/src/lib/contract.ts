@@ -80,3 +80,32 @@ export async function buildContributeXDR(
 
   return rpc.assembleTransaction(tx, sim).build().toXDR();
 }
+
+/** Build + simulate + assemble an unsigned `withdraw(amount)` invocation. */
+export async function buildWithdrawXDR(
+  sender: string,
+  amount: number,
+): Promise<string> {
+  const contract = new Contract(CONTRACT_ID);
+  const account = await server.getAccount(sender);
+
+  const tx = new TransactionBuilder(account, {
+    fee: BASE_FEE,
+    networkPassphrase: NETWORK_PASSPHRASE,
+  })
+    .addOperation(
+      contract.call(
+        'withdraw',
+        nativeToScVal(BigInt(Math.trunc(amount)), { type: 'i128' }),
+      ),
+    )
+    .setTimeout(30)
+    .build();
+
+  const sim = await server.simulateTransaction(tx);
+  if (!rpc.Api.isSimulationSuccess(sim)) {
+    throw new Error('Simulation failed — the withdraw call would not succeed.');
+  }
+
+  return rpc.assembleTransaction(tx, sim).build().toXDR();
+}

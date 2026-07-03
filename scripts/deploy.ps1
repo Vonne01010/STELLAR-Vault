@@ -44,7 +44,7 @@ try {
 if (Test-Path $EnvFile) {
   (Get-Content $EnvFile) | Where-Object { $_ -notmatch '^NEXT_PUBLIC_CONTRACT_ID=' } | Set-Content $EnvFile
 }
-Add-Content $EnvFile "NEXT_PUBLIC_CONTRACT_ID=$ContractId"
+Add-Content -Path $EnvFile -Value "NEXT_PUBLIC_CONTRACT_ID=$ContractId"
 Write-Host ""
-Write-Host "Wrote NEXT_PUBLIC_CONTRACT_ID=$ContractId to web\.env.local"
+Write-Host "Wrote NEXT_PUBLIC_CONTRACT_ID=$ContractId to web/.env.local"
 Write-Host "Restart 'npm run dev' to pick up the new contract ID."

@@ -5,6 +5,25 @@ import { signAndSubmit } from '@/lib/sign';
 
 type Status = 'idle' | 'working' | 'done' | 'error';
 
+function LinkIcon({ className = '' }) {
+  return (
+    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className={className}>
+      <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path>
+      <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path>
+    </svg>
+  );
+}
+
+function RefreshCwIcon({ className = '' }) {
+  return (
+    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className={className}>
+      <polyline points="23 4 23 10 17 10"></polyline>
+      <polyline points="1 20 1 14 7 14"></polyline>
+      <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path>
+    </svg>
+  );
+}
+
 export default function AddTrustline({
   publicKey,
   onDone,
@@ -30,19 +49,34 @@ export default function AddTrustline({
   };
 
   if (status === 'done') {
-    return <p className="text-sm text-emerald-600">USDC trustline added.</p>;
+    return (
+      <div className="inline-flex items-center gap-1.5 rounded-xl bg-emerald-50 border border-emerald-100 px-3.5 py-2 text-xs font-bold text-emerald-700">
+        <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+        USDC trustline established.
+      </div>
+    );
   }
 
   return (
-    <div>
+    <div className="space-y-2">
       <button
         onClick={add}
         disabled={status === 'working'}
-        className="rounded border border-gray-300 bg-white px-3 py-1.5 text-sm text-gray-700 transition-colors hover:bg-gray-50 disabled:opacity-50"
+        className="inline-flex items-center justify-center gap-2 rounded-xl bg-white border border-slate-200 px-4 py-2.5 text-xs font-bold text-slate-700 shadow-sm transition-all hover:bg-slate-50 disabled:opacity-50 active:scale-[0.98]"
       >
-        {status === 'working' ? 'Adding USDC trustline…' : 'Add USDC trustline'}
+        {status === 'working' ? (
+          <RefreshCwIcon className="h-4 w-4 animate-spin text-[#6C5DD3]" />
+        ) : (
+          <LinkIcon className="h-3.5 w-3.5 text-slate-400" />
+        )}
+        {status === 'working' ? 'Linking Ledger Asset…' : 'Add USDC Trustline'}
       </button>
-      {error && <p className="mt-1 text-sm text-red-500">{error}</p>}
+
+      {error && (
+        <div className="rounded-xl bg-rose-50 border border-rose-100 px-3 py-2 max-w-xs">
+          <p className="text-[11px] font-bold text-rose-600 leading-normal">{error}</p>
+        </div>
+      )}
     </div>
   );
 }

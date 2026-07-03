@@ -1,0 +1,25 @@
+[33m25def67[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mezra[m[33m, [m[1;31morigin/main[m[33m, [m[1;31morigin/HEAD[m[33m)[m HEAD@{0}: rebase (finish): returning to refs/heads/ezra
+[33m25def67[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mezra[m[33m, [m[1;31morigin/main[m[33m, [m[1;31morigin/HEAD[m[33m)[m HEAD@{1}: pull --rebase origin main (start): checkout 25def670a9630c6b9e7473581feab8c54b1c55d0
+[33mc39a028[m[33m ([m[1;31morigin/ezra[m[33m)[m HEAD@{2}: pull --rebase origin ezra (finish): returning to refs/heads/ezra
+[33mc39a028[m[33m ([m[1;31morigin/ezra[m[33m)[m HEAD@{3}: pull --rebase origin ezra (pick): Added contracts: vault, permissions, deposit, withdraw
+[33mc783dfd[m HEAD@{4}: pull --rebase origin ezra (pick): Remove Passkey Signer Integration details from README
+[33m93e50b0[m HEAD@{5}: pull --rebase origin ezra (pick): Fix project title formatting in README.md
+[33m3df55ec[m HEAD@{6}: pull --rebase origin ezra (pick): Revise README.md for clarity and detail
+[33m26b9100[m HEAD@{7}: pull --rebase origin ezra (pick): Update README.md
+[33mb8f6ed4[m HEAD@{8}: pull --rebase origin ezra (pick): Rename project to TALA Vault and enhance description
+[33m528ce50[m HEAD@{9}: pull --rebase origin ezra (pick): Revise README introduction for Tala Vault
+[33mef1ff89[m HEAD@{10}: pull --rebase origin ezra (pick): Update README.md
+[33md3eadd7[m HEAD@{11}: pull --rebase origin ezra (pick): description_changes
+[33m7417b46[m HEAD@{12}: pull --rebase origin ezra (pick): readme_update
+[33m360b94b[m HEAD@{13}: pull --rebase origin ezra (start): checkout 360b94b44d07991a69fbeb878d37dd7578512e2b
+[33m306b7f4[m HEAD@{14}: reset: moving to 306b7f4
+[33mca5595d[m HEAD@{15}: rebase (finish): returning to refs/heads/ezra
+[33mca5595d[m HEAD@{16}: pull --rebase origin main (start): checkout ca5595de32a2793a8164e7a1f9be006c501c7023
+[33m306b7f4[m HEAD@{17}: rebase (abort): returning to refs/heads/ezra
+[33mca5595d[m HEAD@{18}: pull --rebase origin main (start): checkout ca5595de32a2793a8164e7a1f9be006c501c7023
+[33m306b7f4[m HEAD@{19}: commit: Added contracts: vault, permissions, deposit, withdraw
+[33m9e9c1cb[m HEAD@{20}: pull origin main: Fast-forward
+[33m360b94b[m HEAD@{21}: commit: Smart contract and frontend for base app (USD)
+[33mf617e5a[m[33m ([m[1;32mmain[m[33m)[m HEAD@{22}: checkout: moving from main to ezra
+[33mf617e5a[m[33m ([m[1;32mmain[m[33m)[m HEAD@{23}: checkout: moving from main to main
+[33mf617e5a[m[33m ([m[1;32mmain[m[33m)[m HEAD@{24}: clone: from https://github.com/aiyesha-cn/ada-s_lovelies
