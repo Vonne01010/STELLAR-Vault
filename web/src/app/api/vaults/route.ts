@@ -2,6 +2,11 @@ import "dotenv/config"
 import { prisma } from "@/lib/prisma"
 import { verifyAuth } from "@/lib/verifyAuth"
 import { logActivity } from "@/lib/logActivity"
+import { Prisma } from "@prisma/client"
+
+function serializeVault(vault: { onChainVaultId: bigint; [key: string]: unknown }) {
+  return { ...vault, onChainVaultId: vault.onChainVaultId.toString() }
+}
 
 export async function GET(request: Request) {
   try {
@@ -15,8 +20,8 @@ export async function GET(request: Request) {
       where: { ownerPubkey: auth.pubkey },
       orderBy: { createdAt: "desc" }
     })
-    
-    return Response.json(vaults)
+
+    return Response.json(vaults.map(serializeVault))
   } catch (error) {
     console.error("Vault fetch error:", error)
     return Response.json(
@@ -37,6 +42,44 @@ export async function POST(request: Request) {
     const body = await request.json()
     const ownerPubkey = auth.pubkey
 
+    const {
+      name,
+      description,
+      goalType,
+      targetAmount,
+      contractAddress,
+      onChainVaultId,
+      vaultType,
+      lockUntil,
+    } = body
+
+    if (!name || !goalType || !targetAmount || !contractAddress || onChainVaultId === undefined || !vaultType) {
+      return Response.json(
+        {
+          error:
+            "Missing required fields: name, goalType, targetAmount, contractAddress, onChainVaultId, vaultType",
+        },
+        { status: 400 }
+      )
+    }
+
+    if (vaultType !== "Personal" && vaultType !== "Collaborative") {
+      return Response.json(
+        { error: "vaultType must be 'Personal' or 'Collaborative'" },
+        { status: 400 }
+      )
+    }
+
+    let parsedOnChainVaultId: bigint
+    try {
+      parsedOnChainVaultId = BigInt(onChainVaultId)
+    } catch {
+      return Response.json(
+        { error: "onChainVaultId must be a valid integer" },
+        { status: 400 }
+      )
+    }
+
     await prisma.user.upsert({
       where: { pubkey: ownerPubkey },
       update: {},
@@ -45,11 +88,14 @@ export async function POST(request: Request) {
 
     const vault = await prisma.vault.create({
       data: {
-        name: body.name,
-        description: body.description,
-        goalType: body.goalType,
-        targetAmount: body.targetAmount,
-        contractId: body.contractId,
+        name,
+        description,
+        goalType,
+        targetAmount,
+        contractAddress,
+        onChainVaultId: parsedOnChainVaultId,
+        vaultType,
+        lockUntil: lockUntil ? new Date(lockUntil) : null,
         ownerPubkey,
       }
     })
@@ -60,9 +106,24 @@ export async function POST(request: Request) {
       vaultId: vault.id,
       detail: `Created vault "${vault.name}"`,
     })
+    
+    await prisma.vaultMember.create({
+      data: {
+        vaultId: vault.id,
+        pubkey: ownerPubkey,
+        role: "Owner",
+      }
+    })
 
-    return Response.json(vault, { status: 201 })
+    return Response.json(serializeVault(vault), { status: 201 })
   } catch (error) {
+    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {
+      return Response.json(
+        { error: "A vault with this contractAddress and onChainVaultId already exists" },
+        { status: 409 }
+      )
+    }
+
     console.error("Vault creation error:", error)
     return Response.json(
       { error: "Failed to create vault" },
