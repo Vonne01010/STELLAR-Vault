@@ -18,14 +18,24 @@ type Status =
   | 'error';
 
 const STATUS_LABEL: Record<Status, string> = {
-  idle: 'Send',
-  building: 'Building transaction…',
-  signing: 'Waiting for Freighter…',
-  submitting: 'Submitting…',
-  polling: 'Confirming on-chain…',
-  success: 'Send',
-  error: 'Send',
+  idle: 'Authorize Secure Payment',
+  building: 'Constructing Transaction Payload…',
+  signing: 'Opening Wallet Signing Port…',
+  submitting: 'Pushing to Core Consensus Network…',
+  polling: 'Validating Final Ledger Confirmation…',
+  success: 'Authorize Secure Payment',
+  error: 'Authorize Secure Payment',
 };
+
+function RefreshCwIcon({ className = '' }) {
+  return (
+    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className={className}>
+      <polyline points="23 4 23 10 17 10"></polyline>
+      <polyline points="1 20 1 14 7 14"></polyline>
+      <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path>
+    </svg>
+  );
+}
 
 export default function SendPayment({
   publicKey,
@@ -35,7 +45,7 @@ export default function SendPayment({
   onSent: () => void;
 }) {
   const [destination, setDestination] = useState('');
-  const [amount, setAmount] = useState('');
+  const [amount, setAmount] = useState('10'); // Managed via slider track bounds
   const [asset, setAsset] = useState<AssetCode>('XLM');
   const [status, setStatus] = useState<Status>('idle');
   const [txHash, setTxHash] = useState('');
@@ -77,72 +87,88 @@ export default function SendPayment({
   };
 
   return (
-    <div className="mt-6 rounded border border-gray-200 bg-white p-6">
-      <h2 className="mb-4 text-lg font-semibold text-gray-900">Send Payment</h2>
+    <div className="mt-6 rounded-4xl border border-violet-100/40 bg-white p-6 shadow-xl shadow-indigo-900/5">
+      <h2 className="mb-5 text-sm font-black text-slate-800 tracking-tight uppercase">Send Global Payment</h2>
 
       <div className="space-y-4">
-        <div>
-          <label className="mb-1 block text-sm text-gray-600">Asset</label>
-          <select
-            value={asset}
-            onChange={(e) => setAsset(e.target.value as AssetCode)}
-            className="w-full rounded border border-gray-300 px-3 py-2 text-gray-900"
-          >
-            <option value="XLM">XLM</option>
-            <option value="USDC">USDC (needs a trustline)</option>
-          </select>
+        {/* Asset Selection */}
+        <div className="space-y-1">
+          <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-400">Settlement Currency</label>
+          <div className="relative">
+            <select
+              value={asset}
+              onChange={(e) => setAsset(e.target.value as AssetCode)}
+              className="w-full appearance-none rounded-xl bg-slate-50 border border-slate-100 px-3.5 py-2.5 text-xs font-bold text-slate-700 outline-none focus:border-violet-200 transition-colors"
+            >
+              <option value="XLM">Native Lumen Asset (XLM)</option>
+              <option value="USDC">Stellar Fiat Peg (USDC - Requires Trustline)</option>
+            </select>
+            <div className="absolute inset-y-0 right-3.5 flex items-center pointer-events-none text-slate-400">
+              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
+                <polyline points="6 9 12 15 18 9"></polyline>
+              </svg>
+            </div>
+          </div>
         </div>
 
-        <div>
-          <label className="mb-1 block text-sm text-gray-600">
-            Destination address
-          </label>
+        {/* Destination Address */}
+        <div className="space-y-1">
+          <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-400">Destination Public Key</label>
           <input
             type="text"
-            placeholder="G… (must be an existing funded testnet account)"
+            placeholder="G… (Funded target address)"
             value={destination}
             onChange={(e) => setDestination(e.target.value)}
-            className="w-full rounded border border-gray-300 px-3 py-2 font-mono text-sm text-gray-900"
+            className="w-full rounded-xl bg-slate-50 border border-slate-100 px-3.5 py-2.5 font-mono text-xs text-slate-700 outline-none focus:border-violet-200 transition-colors placeholder:text-slate-300"
           />
         </div>
 
-        <div>
-          <label className="mb-1 block text-sm text-gray-600">Amount</label>
+        {/* Clamped Slider Amount */}
+        <div className="space-y-1.5 pt-1">
+          <div className="flex justify-between items-center text-[10px] font-bold uppercase tracking-wider">
+            <span className="text-slate-400">Amount To Send</span>
+            <span className="font-mono text-[#6C5DD3] bg-indigo-50 px-2 py-0.5 rounded-md text-xs normal-case">{amount} {asset}</span>
+          </div>
           <input
-            type="number"
-            placeholder="0.00"
+            type="range"
+            min="0"
+            max={asset === 'XLM' ? '100' : '50'}
+            step="1"
             value={amount}
             onChange={(e) => setAmount(e.target.value)}
-            className="w-full rounded border border-gray-300 px-3 py-2 text-gray-900"
+            disabled={busy}
+            className="w-full h-2 bg-slate-100 rounded-lg appearance-none cursor-pointer accent-[#6C5DD3] disabled:opacity-50"
           />
         </div>
 
+        {/* Action Submit */}
         <button
           onClick={handleSend}
-          disabled={busy || !destination || !amount}
-          className="w-full rounded bg-emerald-600 py-3 font-medium text-white transition-colors hover:bg-emerald-700 disabled:opacity-50"
+          disabled={busy || !destination || Number(amount) <= 0}
+          className="w-full flex items-center justify-center gap-2 rounded-xl bg-[#6C5DD3] py-3 text-xs font-bold text-white shadow-md shadow-indigo-900/10 hover:bg-[#5B4FBF] transition-all disabled:opacity-40 active:scale-[0.98] mt-2"
         >
+          {busy && <RefreshCwIcon className="h-3.5 w-3.5 animate-spin" />}
           {STATUS_LABEL[status]}
         </button>
       </div>
 
       {status === 'success' && (
-        <div className="mt-4 rounded border border-emerald-200 bg-emerald-50 p-3">
-          <p className="font-medium text-emerald-700">Payment confirmed!</p>
+        <div className="mt-4 rounded-xl border border-emerald-100 bg-emerald-50/60 p-3.5 space-y-1.5">
+          <p className="text-xs font-bold text-emerald-800">Payment successfully verified.</p>
           <a
             href={`https://stellar.expert/explorer/testnet/tx/${txHash}`}
             target="_blank"
             rel="noopener noreferrer"
-            className="break-all text-sm text-indigo-600 hover:underline"
+            className="inline-flex items-center gap-1 text-[11px] font-bold text-[#6C5DD3] hover:underline"
           >
-            View on Stellar Expert →
+            Inspect Ledger Receipt ↗
           </a>
         </div>
       )}
 
       {status === 'error' && (
-        <div className="mt-4 rounded border border-red-200 bg-red-50 p-3">
-          <p className="text-sm text-red-700">{errorMsg}</p>
+        <div className="mt-4 rounded-xl border border-rose-100 bg-rose-50 p-3">
+          <p className="text-[11px] font-bold text-rose-600 leading-normal">{errorMsg}</p>
         </div>
       )}
     </div>
