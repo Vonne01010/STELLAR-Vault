@@ -128,7 +128,13 @@ async function handleDeposit(vault: Vault, body: Record<string, unknown>, report
     detail: `Deposited ${amount} into "${vault.name}" (new balance: ${newBalance})`,
   })
 
-  return { data: { ...updated, balance: newBalance } }
+  return {
+    data: {
+        ...updated,
+        balance: newBalance,
+        onChainVaultId: updated.onChainVaultId.toString(),
+    }
+    }
 }
 
 async function handleWithdraw(vault: Vault, body: Record<string, unknown>, reporterPubkey: string) {
@@ -159,7 +165,13 @@ async function handleWithdraw(vault: Vault, body: Record<string, unknown>, repor
     detail: `Withdrew ${amount} from "${vault.name}" to ${recipient} (new balance: ${newBalance})`,
   })
 
-  return { data: updated }
+  return {
+    data: {
+        ...updated,
+        balance: newBalance,
+        onChainVaultId: updated.onChainVaultId.toString(),
+    }
+    }
 }
 
 async function handleWithdrawalRequested(vault: Vault, body: Record<string, unknown>, reporterPubkey: string) {
@@ -229,7 +241,13 @@ async function handleWithdrawalExecuted(vault: Vault, body: Record<string, unkno
     detail: `Executed withdrawal #${requestId} of ${amount} from "${vault.name}" to ${recipient} (new balance: ${newBalance})`,
   })
 
-  return { data: updated }
+  return {
+    data: {
+        ...updated,
+        balance: newBalance,
+        onChainVaultId: updated.onChainVaultId.toString(),
+    }
+    }
 }
 
 async function handleVaultClosed(vault: Vault, reporterPubkey: string) {
@@ -249,5 +267,10 @@ async function handleVaultClosed(vault: Vault, reporterPubkey: string) {
     detail: `Closed vault "${vault.name}"`,
   })
 
-  return { data: updated }
+  return {
+    data: {
+      ...updated,
+      onChainVaultId: updated.onChainVaultId.toString(),
+    }
+  }
 }
