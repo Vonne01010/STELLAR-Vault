@@ -27,6 +27,7 @@ import { loadHistory, type HistoryEntry } from '@/lib/history';
 
 interface DashboardProps {
   publicKey: string | null;
+  onLogout: () => void;
 }
 
 type Panel = 'deposit' | 'withdraw' | 'receive' | null;
@@ -165,7 +166,7 @@ function formatCurrency(value: number): string {
   return `$${formatAmount(value)}`;
 }
 
-export default function SavingsDashboard({ publicKey }: DashboardProps) {
+export default function SavingsDashboard({ publicKey, onLogout }: DashboardProps) {
   const configured = contractConfigured();
   const [state, setState] = useState<SavingsState | null>(null);
   const [walletBalances, setWalletBalances] = useState<Balances | null>(null);
@@ -227,6 +228,14 @@ export default function SavingsDashboard({ publicKey }: DashboardProps) {
     }
     setHistory(await loadHistory(address));
   }, []);
+
+  const handleLogout = () => {
+    setPanel(null);
+    setActiveTab('home');
+    setMsg('');
+    setError('');
+    onLogout();
+  };
 
   useEffect(() => {
     if (!configured) return;
@@ -874,6 +883,15 @@ export default function SavingsDashboard({ publicKey }: DashboardProps) {
                 <span className="font-mono font-semibold text-slate-700">1 USD = ₱{phpRate.toFixed(2)}</span>
               </div>
             </div>
+
+            {publicKey && (
+              <button
+                onClick={handleLogout}
+                className="mt-4 w-full py-3 rounded-xl bg-white border border-rose-200 text-rose-500 text-sm font-bold hover:bg-rose-50 transition-colors"
+              >
+                Log out
+              </button>
+            )}
           </div>
         )}
       </div>
