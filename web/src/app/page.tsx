@@ -2,11 +2,11 @@
 import { useState, useCallback, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useWallet } from '@/hooks/useWallet';
+import { hasAccount } from '@/lib/auth/storage';
 import ConnectWallet from '@/components/ConnectWallet';
 import FundAccount from '@/components/FundAccount';
 import AddTrustline from '@/components/AddTrustline';
 import SavingsDashboard from '@/components/SavingsDashboard';
-import { hasAccount } from '@/lib/auth/storage';
 
 /* ---------- Pure Inline Decorative Icons ---------- */
 function ShieldIcon({ className = '' }) {
@@ -148,29 +148,6 @@ export default function Home() {
             </div>
           )}
         </section>
-
-        {/* Empty Wallet State Frame */}
-        {!publicKey && !connecting && (
-          <div className="mb-5 rounded-4xl border border-violet-100/40 bg-white/80 backdrop-blur-sm py-12 px-6 text-center shadow-inner">
-            <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-2xl bg-indigo-50 text-[#6C5DD3]">
-              <ShieldIcon className="h-6 w-6" />
-            </div>
-            <p className="text-xs font-bold text-slate-600 mb-1">Authorization Credentials Required</p>
-            <p className="text-[11px] font-medium text-slate-400 leading-relaxed max-w-xs mx-auto">
-              Connect your Freighter hardware or browser layer extension to configure your profile token variables. 
-              If needed,{' '}
-              <a
-                href="https://freighter.app"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="font-bold text-[#6C5DD3] hover:underline"
-              >
-                Install Freighter Extension
-              </a>{' '}
-              and switch the runtime to Test Net mode.
-            </p>
-          </div>
-        )}
 
         {/* On-Chain Pipeline Interaction Gate */}
         {publicKey && (
