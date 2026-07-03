@@ -2,6 +2,7 @@
 import { useState, useCallback, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useWallet } from '@/hooks/useWallet';
+import { hasAccount } from '@/lib/auth/storage';
 import ConnectWallet from '@/components/ConnectWallet';
 import FundAccount from '@/components/FundAccount';
 import AddTrustline from '@/components/AddTrustline';
@@ -35,9 +36,17 @@ export default function Home() {
   // Auth guard — only decide once the wallet has actually finished hydrating
   // and any in-flight reconnect has settled. Redirecting before that point
   // was causing a false "not logged in" bounce right after login/create.
+  //
+  // Two different "not logged in" cases get sent to two different places:
+  //   - no account on this device at all  -> /register (brand-new visitor)
+  //   - an account exists but isn't unlocked -> /login
   useEffect(() => {
-    if (!loading && !publicKey) {
+    if (loading || publicKey) return;
+
+    if (hasAccount()) {
       router.replace('/login');
+    } else {
+      router.replace('/register');
     }
   }, [loading, publicKey, router]);
 
