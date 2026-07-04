@@ -3,7 +3,7 @@ import { useState } from 'react';
 import { buildCreateVaultXDR } from '@/lib/contract';
 import { submitSignedXDR, pollTransactionForResult } from '@/lib/payment';
 import { NETWORK_PASSPHRASE, CONTRACT_ID } from '@/lib/stellar';
-import { authFetch } from '@/lib/wallet';
+import { authFetch, signWithCurrentAccount } from '@/lib/wallet';
 
 type Status = 'idle' | 'building' | 'signing' | 'submitting' | 'confirming' | 'saving' | 'success' | 'error';
 
@@ -47,19 +47,10 @@ export default function CreateVault({
       });
 
       setStatus('signing');
-      const freighter = await import('@stellar/freighter-api');
-      const signed = await freighter.signTransaction(xdr, {
-        networkPassphrase: NETWORK_PASSPHRASE,
-        address: publicKey,
-      });
-      if (signed.error) {
-        throw new Error(
-          typeof signed.error === 'string' ? signed.error : 'Signing was rejected',
-        );
-      }
+      const signedXdr = await signWithCurrentAccount(xdr);
 
       setStatus('submitting');
-      const hash = await submitSignedXDR(signed.signedTxXdr);
+      const hash = await submitSignedXDR(signedXdr);
 
       setStatus('confirming');
       const onChainVaultId = await pollTransactionForResult(hash);
