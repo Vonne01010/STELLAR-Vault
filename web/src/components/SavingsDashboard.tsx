@@ -96,6 +96,7 @@ function NavIcon({ type, active }: { type: Tab; active: boolean }) {
 
 export default function SavingsDashboard({ publicKey, wallet }: DashboardProps) {
   const configured = contractConfigured();
+
   const [state, setState] = useState<SavingsState | null>(null);
   const [walletBalances, setWalletBalances] = useState<Balances | null>(null);
   const [vaultSummary, setVaultSummary] = useState<VaultBalanceSummary | null>(null);
@@ -111,6 +112,8 @@ export default function SavingsDashboard({ publicKey, wallet }: DashboardProps) 
   const [transferState, setTransferState] = useState(getTransferState());
   const [history, setHistory] = useState<HistoryEntry[]>([]);
   const [copied, setCopied] = useState(false);
+  const [profile, setProfile] = useState<UserProfile | null>(null);
+  const [trust, setTrust] = useState<TrustScore | null>(null);
 
   // Form states
   const [depositAmount, setDepositAmount] = useState('250');
@@ -162,142 +165,60 @@ export default function SavingsDashboard({ publicKey, wallet }: DashboardProps) 
   }, [configured, loadVaultSummary, publicKey]);
 
   const refreshHistory = useCallback(async (address: string | null) => {
-    if (!address) {
-      setHistory([]);
-      return;
-    }
+    if (!address) { setHistory([]); return; }
     setHistory(await loadHistory(address));
   }, []);
 
-  const handleLogout = () => {
-    setPanel(null);
-    setActiveTab('home');
-    setMsg('');
-    setError('');
-    onLogout();
-  };
+  useEffect(() => {
+    setProfile(loadProfile());
+    setTrust(loadTrustScore());
+  }, []);
 
   useEffect(() => {
     if (!configured) return;
     let ignore = false;
-
-    Promise.resolve()
-      .then(() => {
-        if (ignore) return undefined;
-        setLoading(true);
-        setError('');
-        return readSavingsState();
-      })
-      .then((next) => {
-        if (!ignore && next !== undefined) setState(next);
-      })
-      .catch((e: unknown) => {
-        if (!ignore) setError(e instanceof Error ? e.message : 'Failed to read contract');
-      })
-      .finally(() => {
-        if (!ignore) setLoading(false);
-      });
-
-    return () => {
-      ignore = true;
-    };
+    setLoading(true);
+    setError('');
+    readSavingsState()
+      .then((next) => { if (!ignore) setState(next); })
+      .catch((e: unknown) => { if (!ignore) setError(e instanceof Error ? e.message : 'Failed to read contract'); })
+      .finally(() => { if (!ignore) setLoading(false); });
+    return () => { ignore = true; };
   }, [configured]);
 
   useEffect(() => {
     let ignore = false;
-
-    Promise.resolve()
-      .then(() => {
-        if (ignore) return undefined;
-        if (!publicKey) {
-          setHistory([]);
-          return undefined;
-        }
-        return loadHistory(publicKey);
-      })
-      .then((data) => {
-        if (!ignore && data !== undefined) setHistory(data);
-      });
-
-    return () => {
-      ignore = true;
-    };
+    if (!publicKey) { setHistory([]); return; }
+    loadHistory(publicKey).then((data) => { if (!ignore) setHistory(data); });
+    return () => { ignore = true; };
   }, [publicKey]);
 
   useEffect(() => {
     let ignore = false;
-
-    const run = async () => {
-      if (!publicKey) {
-        if (!ignore) {
-          setWalletBalances(null);
-        }
-        return;
-      }
-
-      try {
-        const balances = await fetchBalances(publicKey);
-        if (!ignore) {
-          setWalletBalances(balances);
-        }
-      } catch {
-        if (!ignore) {
-          setWalletBalances(null);
-        }
-      }
-    };
-
-    void run();
-
-    return () => {
-      ignore = true;
-    };
+    if (!publicKey) { setWalletBalances(null); return; }
+    fetchBalances(publicKey)
+      .then((b) => { if (!ignore) setWalletBalances(b); })
+      .catch(() => { if (!ignore) setWalletBalances(null); });
+    return () => { ignore = true; };
   }, [publicKey]);
 
   useEffect(() => {
     let ignore = false;
-
-    const run = async () => {
-      if (!publicKey) {
-        if (!ignore) {
-          setVaultSummary(null);
-        }
-        return;
-      }
-
-      if (!ignore) {
-        await loadVaultSummary(publicKey);
-      }
-    };
-
-    void run();
-
-    return () => {
-      ignore = true;
-    };
+    if (!publicKey) { setVaultSummary(null); return; }
+    loadVaultSummary(publicKey).then(() => { }).catch(() => { });
+    return () => { ignore = true; };
   }, [loadVaultSummary, publicKey]);
 
-  useEffect(() => {
-    return subscribeToTransferState(() => {
-      setTransferState(getTransferState());
-    });
-  }, []);
+  useEffect(() => subscribeToTransferState(() => setTransferState(getTransferState())), []);
 
   useEffect(() => {
     fetch('https://open.er-api.com/v6/latest/USD')
-      .then((res) => res.json())
-      .then((data) => {
-        if (data?.rates?.PHP) {
-          setPhpRate(data.rates.PHP);
-        }
-      })
-      .catch(() => {});
+      .then((r) => r.json())
+      .then((d) => { if (d?.rates?.PHP) setPhpRate(d.rates.PHP); })
+      .catch(() => { });
   }, []);
 
-  const pendingApproval = useMemo<PendingTransferApproval | null>(() => {
-    if (!publicKey) return null;
-    return getPendingTransferApprovalsForAddress(publicKey).find((item) => item.status !== 'submitted') ?? null;
-  }, [publicKey]);
+  /* ---------- Handlers ---------- */
 
   const handleCopyAddress = async () => {
     if (!publicKey) return;
@@ -312,16 +233,9 @@ export default function SavingsDashboard({ publicKey, wallet }: DashboardProps) 
 
   const handleDeposit = async () => {
     if (!publicKey || !depositAmount || Number(depositAmount) <= 0) return;
-    setBusy(true);
-    setError('');
-    setMsg('');
+    setBusy(true); setError(''); setMsg('');
     try {
-      await depositUSDC(depositAmount, {
-        onCompleted: async () => {
-          await refresh();
-          await refreshHistory(publicKey);
-        },
-      });
+      await depositUSDC(depositAmount, { onCompleted: async () => { await refresh(); await refreshHistory(publicKey); } });
       setMsg('Contribution saved successfully!');
       setPanel(null);
     } catch (e: unknown) {
@@ -334,16 +248,9 @@ export default function SavingsDashboard({ publicKey, wallet }: DashboardProps) 
 
   const handleWithdraw = async () => {
     if (!publicKey || !withdrawAmount || Number(withdrawAmount) <= 0) return;
-    setBusy(true);
-    setError('');
-    setMsg('');
+    setBusy(true); setError(''); setMsg('');
     try {
-      await withdrawUSDC(withdrawAmount, {
-        onCompleted: async () => {
-          await refresh();
-          await refreshHistory(publicKey);
-        },
-      });
+      await withdrawUSDC(withdrawAmount, { onCompleted: async () => { await refresh(); await refreshHistory(publicKey); } });
       setMsg('Withdrawal completed successfully!');
       setPanel(null);
     } catch (e: unknown) {
@@ -361,30 +268,30 @@ export default function SavingsDashboard({ publicKey, wallet }: DashboardProps) 
     setError('');
   };
 
+  const pendingApproval = useMemo<PendingTransferApproval | null>(() => {
+    if (!publicKey) return null;
+    return getPendingTransferApprovalsForAddress(publicKey).find((item) => item.status !== 'submitted') ?? null;
+  }, [publicKey]);
+
   const handleApproveAsSender = () => {
     if (!pendingApproval || !publicKey || pendingApproval.sender !== publicKey) return;
-    if (updatePendingTransferApproval(pendingApproval.id, { senderAuthorized: true })) {
+    if (updatePendingTransferApproval(pendingApproval.id, { senderAuthorized: true }))
       setMsg('Sender approval recorded. Waiting for receiver approval.');
-    }
   };
 
   const handleApproveAsReceiver = () => {
     if (!pendingApproval || !publicKey || pendingApproval.recipient !== publicKey) return;
-    if (updatePendingTransferApproval(pendingApproval.id, { receiverAuthorized: true })) {
+    if (updatePendingTransferApproval(pendingApproval.id, { receiverAuthorized: true }))
       setMsg('Receiver approval recorded. The sender can now submit the transfer.');
-    }
   };
 
   const handleSubmitApprovedTransfer = async () => {
     if (!pendingApproval || !publicKey || pendingApproval.sender !== publicKey || !pendingApproval.senderAuthorized || !pendingApproval.receiverAuthorized) return;
-    setBusy(true);
-    setError('');
-    setMsg('');
+    setBusy(true); setError(''); setMsg('');
     try {
       await transferUSDC(pendingApproval.recipient, pendingApproval.amount, {
         onCompleted: async () => {
-          setRecipient('');
-          setTransferAmount('');
+          setRecipient(''); setTransferAmount('');
           removePendingTransferApproval(pendingApproval.id);
           await refreshHistory(publicKey);
         },
@@ -397,6 +304,8 @@ export default function SavingsDashboard({ publicKey, wallet }: DashboardProps) 
       resetTransferState();
     }
   };
+
+  /* ---------- Derived values ---------- */
 
   if (!configured) {
     return (
@@ -419,6 +328,17 @@ export default function SavingsDashboard({ publicKey, wallet }: DashboardProps) 
   const totalEquivalentInPhp = walletUsdcBalance * phpRate;
   const purchasingPowerSaved = walletUsdcBalance * (phpRate * 0.06);
   const recentPreview = history.slice(0, 3);
+
+  const greeting = () => {
+    const h = new Date().getHours();
+    if (h < 12) return 'Good morning';
+    if (h < 18) return 'Good afternoon';
+    return 'Good evening';
+  };
+
+  const identity = publicKey ? `${publicKey.slice(0, 4)}…${publicKey.slice(-4)}` : 'Guest';
+
+  /* ---------- Render ---------- */
 
   return (
     <div className="max-w-md mx-auto min-h-210 bg-[#FAF8F5] rounded-[3.2rem] overflow-hidden shadow-2xl relative flex flex-col justify-between font-sans border border-slate-200/50">
@@ -771,7 +691,6 @@ export default function SavingsDashboard({ publicKey, wallet }: DashboardProps) 
             onLogout={handleLogout}
           />
         )}
-      </div>
 
       {/* Mockup Fixed Floating Dock Menu */}
       <div className="absolute bottom-0 inset-x-0 bg-white/95 backdrop-blur-md border-t border-slate-200/60 px-3 pt-4 pb-8 flex justify-between items-center rounded-t-[2.4rem] shadow-xl shadow-slate-900/10 z-40">
@@ -795,6 +714,7 @@ export default function SavingsDashboard({ publicKey, wallet }: DashboardProps) 
           );
         })}
       </div>
+
     </div>
   );
 }
