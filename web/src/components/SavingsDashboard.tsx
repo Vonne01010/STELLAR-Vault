@@ -688,7 +688,7 @@ export default function SavingsDashboard({ publicKey, wallet }: DashboardProps) 
             wallet={wallet}
             loading={loading}
             onRefresh={refresh}
-            onLogout={handleLogout}
+            onLogout={onLogout}
           />
         )}
 
