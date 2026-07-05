@@ -48,7 +48,7 @@ interface DashboardProps {
 }
 
 type Panel = 'deposit' | 'withdraw' | 'receive' | 'send' | 'create' | null;
-type Tab = 'home' | 'activity' | 'vaults' | 'profile';
+type Tab = 'home' | 'vaults' | 'activity' | 'profile';
 
 /* ---------- SVG Icon Toolkit ---------- */
 
@@ -710,7 +710,7 @@ export default function SavingsDashboard({ publicKey, wallet }: DashboardProps) 
 
       {/* Mockup Fixed Floating Dock Menu */}
       <div className="absolute bottom-0 inset-x-0 bg-white/95 backdrop-blur-md border-t border-slate-200/60 px-3 pt-4 pb-8 flex justify-between items-center rounded-t-[2.4rem] shadow-xl shadow-slate-900/10 z-40">
-        {(['home', 'activity', 'vaults', 'profile'] as Tab[]).map((tab) => {
+        {(['home', 'vaults', 'activity', 'profile'] as Tab[]).map((tab) => {
           const isSelected = activeTab === tab;
           
           return (
