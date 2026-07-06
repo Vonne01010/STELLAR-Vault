@@ -9,14 +9,14 @@ import { authFetch, signWithCurrentAccount, walletService } from '@/lib/wallet';
 type Status = 'idle' | 'building' | 'signing' | 'submitting' | 'confirming' | 'saving' | 'success' | 'error';
 
 const STATUS_LABEL: Record<Status, string> = {
-  idle: 'Initialize Vault',
-  building: 'Building TX…',
-  signing: 'Signing payload…',
-  submitting: 'Broadcasting…',
-  confirming: 'On-chain verification…',
-  saving: 'Storing state…',
-  success: 'Vault deployed!',
-  error: 'Initialize Vault',
+  idle: 'Create Vault',
+  building: 'Building…',
+  signing: 'Signing…',
+  submitting: 'Submitting…',
+  confirming: 'Verifying…',
+  saving: 'Saving…',
+  success: 'Vault created!',
+  error: 'Create Vault',
 };
 
 const SESSION_KEY_MISSING_MESSAGE = 'Your session key is unavailable. Please unlock your account again.';
@@ -140,7 +140,7 @@ export default function CreateVault({
           type="text"
           value={description}
           onChange={(e) => setDescription(e.target.value)}
-          placeholder="Allocation objective parameter"
+          placeholder="Description"
           disabled={busy}
           className="w-full rounded-xl bg-slate-50 border border-slate-100 px-3.5 py-2.5 text-xs text-slate-800 outline-none focus:border-[#A0F0F0] disabled:opacity-50 transition-colors placeholder:text-slate-300"
         />
@@ -194,7 +194,7 @@ export default function CreateVault({
       {needsPin && (
         <div className="rounded-xl border border-slate-100 bg-slate-50/50 p-4 space-y-3">
           <p className="text-[10px] uppercase tracking-wider text-slate-400 font-light">
-            Session timed out. Enter PIN to deploy.
+            Enter PIN
           </p>
           <input
             type="password"
@@ -212,7 +212,7 @@ export default function CreateVault({
               disabled={unlocking || !pinInput}
               className="flex-1 rounded-xl bg-linear-to-r from-[#FF9F1C] to-[#F37A00] text-white py-2.5 text-[10px] uppercase tracking-widest font-normal disabled:opacity-40"
             >
-              {unlocking ? 'Unlocking…' : 'Unlock'}
+              {unlocking ? 'Creating…' : 'New'}
             </button>
             <button
               onClick={() => { setNeedsPin(false); setPinInput(''); setPinError(''); }}
@@ -227,7 +227,7 @@ export default function CreateVault({
 
       {status === 'success' && (
         <div className="p-3 text-[11px] text-emerald-600 font-light">
-          <p>Vault initialized successfully.</p>
+          <p>Vault create successfully.</p>
         </div>
       )}
 

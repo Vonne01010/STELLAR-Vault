@@ -532,7 +532,7 @@ return (
                             onClick={() => setReceiveMode('address')}
                             className={`py-1 text-[9px] uppercase tracking-wider rounded-md transition-all ${receiveMode === 'address' ? 'bg-[#E0FBFB] text-slate-800' : 'text-slate-400 font-light'}`}
                           >
-                            Address
+                            My Address
                           </button>
                           <button 
                             onClick={() => setReceiveMode('qr')}
@@ -544,7 +544,6 @@ return (
 
                         {receiveMode === 'address' ? (
                           <div className="space-y-2 animate-fadeIn">
-                            <label className="block text-[10px] uppercase tracking-wider text-slate-400 font-light">Stellar Public Address</label>
                             <p className="break-all rounded-xl border border-slate-100 bg-slate-50 p-3 text-[11px] text-slate-500 leading-relaxed font-mono">{publicKey}</p>
                             <button 
                               onClick={handleCopyAddress} 
