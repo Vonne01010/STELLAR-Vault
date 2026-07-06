@@ -223,10 +223,11 @@ export async function readVaultBalanceSummary(
 export async function buildContributeXDR(
   sender: string,
   amount: number,
+  vaultId?: string | number,
 ): Promise<string> {
   const contract = new Contract(CONTRACT_ID);
   const account = await server.getAccount(sender);
-  const vaultId = resolveVaultId();
+  const resolvedVaultId = resolveVaultId(vaultId);
 
   const tx = new TransactionBuilder(account, {
     fee: BASE_FEE,
@@ -236,7 +237,7 @@ export async function buildContributeXDR(
       contract.call(
         'deposit',
         nativeToScVal(Address.fromString(sender), { type: 'address' }),
-        nativeToScVal(BigInt(vaultId), { type: 'u64' }),
+        nativeToScVal(BigInt(resolvedVaultId), { type: 'u64' }),
         nativeToScVal(BigInt(Math.trunc(amount)), { type: 'i128' }),
       ),
     )
@@ -255,10 +256,11 @@ export async function buildContributeXDR(
 export async function buildWithdrawXDR(
   sender: string,
   amount: number,
+  vaultId?: string | number,
 ): Promise<string> {
   const contract = new Contract(CONTRACT_ID);
   const account = await server.getAccount(sender);
-  const vaultId = resolveVaultId();
+  const resolvedVaultId = resolveVaultId(vaultId);
 
   const tx = new TransactionBuilder(account, {
     fee: BASE_FEE,
@@ -268,7 +270,7 @@ export async function buildWithdrawXDR(
       contract.call(
         'withdraw',
         nativeToScVal(Address.fromString(sender), { type: 'address' }),
-        nativeToScVal(BigInt(vaultId), { type: 'u64' }),
+        nativeToScVal(BigInt(resolvedVaultId), { type: 'u64' }),
         nativeToScVal(Address.fromString(sender), { type: 'address' }),
         nativeToScVal(BigInt(Math.trunc(amount)), { type: 'i128' }),
       ),

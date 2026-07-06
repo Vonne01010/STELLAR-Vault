@@ -220,6 +220,7 @@ async function submitAndConfirm(signedXdr: string): Promise<string> {
 async function runTransfer(
   operation: TransferOperation,
   amount: string | number,
+  vaultId: string | number | undefined,
   options: TransferOptions = {},
 ): Promise<TransferResult> {
   const normalizedAmount = normalizeAmount(amount);
@@ -237,10 +238,10 @@ async function runTransfer(
 
     if (operation === 'deposit') {
       setState({ status: 'building', message: 'Building deposit transaction…' });
-      xdr = await buildContributeXDR(sender, normalizedAmount);
+      xdr = await buildContributeXDR(sender, normalizedAmount, vaultId);
     } else if (operation === 'withdraw') {
       setState({ status: 'building', message: 'Building withdrawal transaction…' });
-      xdr = await buildWithdrawXDR(sender, normalizedAmount);
+      xdr = await buildWithdrawXDR(sender, normalizedAmount, vaultId);
     } else {
       if (!options.recipient || !StrKey.isValidEd25519PublicKey(options.recipient)) {
         throw new Error('Please provide a valid Stellar recipient address.');
@@ -261,7 +262,7 @@ async function runTransfer(
       amount: normalizedAmount,
       sender,
       recipient: operation === 'transfer' ? options.recipient ?? '' : 'vault',
-      vaultId: operation === 'transfer' ? undefined : process.env.NEXT_PUBLIC_CONTRACT_ID ?? undefined,
+      vaultId: operation === 'transfer' ? undefined : vaultId !== undefined ? String(vaultId) : undefined,
       confirmedAt: new Date().toISOString(),
       message: operation === 'deposit'
         ? 'Deposit completed successfully.'
@@ -301,12 +302,20 @@ async function runTransfer(
   }
 }
 
-export async function depositUSDC(amount: string | number, options: TransferOptions = {}): Promise<TransferResult> {
-  return runTransfer('deposit', amount, options);
+export async function depositUSDC(
+  amount: string | number,
+  vaultId: string | number,
+  options: TransferOptions = {},
+): Promise<TransferResult> {
+  return runTransfer('deposit', amount, vaultId, options);
 }
 
-export async function withdrawUSDC(amount: string | number, options: TransferOptions = {}): Promise<TransferResult> {
-  return runTransfer('withdraw', amount, options);
+export async function withdrawUSDC(
+  amount: string | number,
+  vaultId: string | number,
+  options: TransferOptions = {},
+): Promise<TransferResult> {
+  return runTransfer('withdraw', amount, vaultId, options);
 }
 
 export async function transferUSDC(
@@ -314,7 +323,7 @@ export async function transferUSDC(
   amount: string | number,
   options: Omit<TransferOptions, 'recipient'> = {},
 ): Promise<TransferResult> {
-  return runTransfer('transfer', amount, { ...options, recipient });
+  return runTransfer('transfer', amount, undefined, { ...options, recipient });
 }
 
 export function getTransferState(): TransferState {

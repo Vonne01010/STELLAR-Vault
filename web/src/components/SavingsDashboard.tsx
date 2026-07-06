@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { fetchBalances, type Balances } from '@/lib/balances';
-import { walletService } from '@/lib/wallet';
+import { walletService, authFetch } from '@/lib/wallet';
 import {
   contractConfigured,
   readSavingsState,
@@ -291,12 +291,18 @@ export default function SavingsDashboard({ publicKey, wallet }: DashboardProps) 
     setBusy(true); setError(''); setMsg('');
     try {
       await runWithReauth(async () => {
-        await depositUSDC(depositAmount, { onCompleted: async () => { await refresh(); await refreshHistory(publicKey); } });
-        setMsg('Contribution saved successfully!');
+        const res = await authFetch('/api/faucet/usdc', { method: 'POST' });
+        const data = await res.json();
+        if (!res.ok) {
+          throw new Error(data?.error ?? 'Failed to fund wallet with test USDC.');
+        }
+        await refresh();
+        await refreshHistory(publicKey);
+        setMsg(`Received ${data.amount} test USDC!`);
         setPanel(null);
       });
     } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : 'Contribution failed');
+      setError(e instanceof Error ? e.message : 'Deposit failed');
     } finally {
       setBusy(false);
       resetTransferState();
@@ -304,20 +310,9 @@ export default function SavingsDashboard({ publicKey, wallet }: DashboardProps) 
   };
 
   const handleWithdraw = async () => {
-    if (!publicKey || !withdrawAmount || Number(withdrawAmount) <= 0) return;
-    setBusy(true); setError(''); setMsg('');
-    try {
-      await runWithReauth(async () => {
-        await withdrawUSDC(withdrawAmount, { onCompleted: async () => { await refresh(); await refreshHistory(publicKey); } });
-        setMsg('Withdrawal completed successfully!');
-        setPanel(null);
-      });
-    } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : 'Withdrawal failed');
-    } finally {
-      setBusy(false);
-      resetTransferState();
-    }
+    setError('');
+    setMsg('');
+    setError('Cashing out to is coming soon. Your funds stay safely in your wallet for now.');
   };
 
   const handleTransferRequest = () => {
@@ -578,8 +573,8 @@ export default function SavingsDashboard({ publicKey, wallet }: DashboardProps) 
                       </span>
                     </div>
 
-                    <button onClick={handleWithdraw} disabled={busy || loading || !withdrawAmount || Number(withdrawAmount) <= 0} className="w-full py-3.5 mt-1 rounded-2xl bg-[#FF5E00] text-white text-xs font-black tracking-wider uppercase active:scale-[0.99] transition-transform disabled:opacity-40 shadow-md shadow-orange-500/10">
-                      {busy ? 'Processing Transaction…' : 'Execute Withdrawal'}
+                    <button onClick={handleWithdraw} className="w-full py-3.5 mt-1 rounded-2xl bg-slate-200 text-slate-500 text-xs font-black tracking-wider uppercase cursor-not-allowed">
+                      Coming Soon
                     </button>
                   </div>
                 )}
