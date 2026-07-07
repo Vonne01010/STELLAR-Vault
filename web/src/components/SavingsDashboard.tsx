@@ -55,7 +55,7 @@ type Tab = 'home' | 'vaults' | 'activity' | 'profile';
 
 function EyeIcon({ className = '' }) {
   return (
-    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className={className}>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
       <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
       <circle cx="12" cy="12" r="3"></circle>
     </svg>
@@ -75,7 +75,7 @@ function NavIcon({ type, active }: { type: Tab; active: boolean }) {
   const color = active ? '#1A1A1A' : '#A4B0BE';
   if (type === 'home') {
     return (
-      <svg className="w-6 h-6" fill={active ? '#A0F0F0' : 'none'} stroke={color} strokeWidth="2.2" viewBox="0 0 24 24">
+      <svg className="w-5 h-5" fill={active ? '#A0F0F0' : 'none'} stroke={color} strokeWidth="2" viewBox="0 0 24 24">
         <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
         <polyline points="9 22 9 12 15 12 15 22"></polyline>
       </svg>
@@ -83,7 +83,7 @@ function NavIcon({ type, active }: { type: Tab; active: boolean }) {
   }
   if (type === 'activity') {
     return (
-      <svg className="w-6 h-6" fill="none" stroke={color} strokeWidth="2.2" viewBox="0 0 24 24">
+      <svg className="w-5 h-5" fill="none" stroke={color} strokeWidth="2" viewBox="0 0 24 24">
         <circle cx="12" cy="12" r="10"></circle>
         <polyline points="12 6 12 12 16 14"></polyline>
       </svg>
@@ -91,21 +91,21 @@ function NavIcon({ type, active }: { type: Tab; active: boolean }) {
   }
   if (type === 'vaults') {
     return (
-      <svg className="w-6 h-6" fill="none" stroke={color} strokeWidth="2.2" viewBox="0 0 24 24">
+      <svg className="w-5 h-5" fill="none" stroke={color} strokeWidth="2" viewBox="0 0 24 24">
         <rect x="3" y="7" width="18" height="13" rx="2"></rect>
         <path d="M8 7V5a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
       </svg>
     );
   }
   return (
-    <svg className="w-6 h-6" fill="none" stroke={color} strokeWidth="2.2" viewBox="0 0 24 24">
+    <svg className="w-5 h-5" fill="none" stroke={color} strokeWidth="2" viewBox="0 0 24 24">
       <circle cx="12" cy="7" r="4"></circle>
       <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
     </svg>
   );
 }
 
-  const SESSION_KEY_MISSING_MESSAGE = 'Your session key is unavailable. Please unlock your account again.';
+const SESSION_KEY_MISSING_MESSAGE = 'Your session key is unavailable. Please unlock your account again.';
 
 export default function SavingsDashboard({ publicKey, wallet }: DashboardProps) {
   const configured = contractConfigured();
@@ -134,7 +134,7 @@ export default function SavingsDashboard({ publicKey, wallet }: DashboardProps) 
   const [recipient, setRecipient] = useState('');
   const [transferAmount, setTransferAmount] = useState('');
 
-  // Sub-mode selectors for Options (Amount Input vs QR)
+  // Sub-mode selectors
   const [sendMode, setSendMode] = useState<'amount' | 'qr'>('amount');
   const [receiveMode, setReceiveMode] = useState<'address' | 'qr'>('address');
   const [needsPin, setNeedsPin] = useState(false);
@@ -144,8 +144,8 @@ export default function SavingsDashboard({ publicKey, wallet }: DashboardProps) 
   const [pendingRetry, setPendingRetry] = useState<(() => Promise<void>) | null>(null);
 
   const safeNumber = (v: unknown): number => {
-  const n = Number(v);
-  return isFinite(n) ? n : 0;
+    const n = Number(v);
+    return isFinite(n) ? n : 0;
   };
 
   const onLogout = useCallback(() => {
@@ -248,12 +248,7 @@ export default function SavingsDashboard({ publicKey, wallet }: DashboardProps) 
       // ignore
     }
   };
-  /**
-   * Runs a money-moving action. If it fails specifically because the
-   * in-memory session key is missing (e.g. after a page reload), shows an
-   * inline PIN prompt and remembers the action so it can retry automatically
-   * once the user unlocks again — instead of a dead-end error.
-   */
+
   const runWithReauth = async (action: () => Promise<void>) => {
     try {
       await action();
@@ -264,7 +259,7 @@ export default function SavingsDashboard({ publicKey, wallet }: DashboardProps) 
         setNeedsPin(true);
         return;
       }
-      throw e; // let the caller's existing catch block handle any other error
+      throw e;
     }
   };
 
@@ -312,7 +307,7 @@ export default function SavingsDashboard({ publicKey, wallet }: DashboardProps) 
   const handleWithdraw = async () => {
     setError('');
     setMsg('');
-    setError('Cashing out to is coming soon. Your funds stay safely in your wallet for now.');
+    setError('Cashing out is coming soon. Your funds stay safely in your wallet for now.');
   };
 
   const handleTransferRequest = () => {
@@ -361,94 +356,62 @@ export default function SavingsDashboard({ publicKey, wallet }: DashboardProps) 
     }
   };
 
-  /* ---------- Derived values ---------- */
-
   if (!configured) {
     return (
-      <div className="p-6 max-w-md mx-auto bg-white border border-orange-100 rounded-3xl text-slate-800 shadow-xl flex items-center gap-3">
-        <p className="text-sm font-medium text-slate-500">Deploy the Soroban tracking contract to access your assets.</p>
+      <div className="p-6 max-w-md mx-auto bg-white border border-slate-100 rounded-2xl text-slate-800 flex items-center gap-3">
+        <p className="text-xs font-light tracking-wide text-slate-400">Deploy the Soroban tracking contract to access your assets.</p>
       </div>
     );
   }
 
   const walletUsdcBalance = safeNumber(walletBalances?.usdc);
-  const walletXlmBalance = safeNumber(walletBalances?.xlm);
-  const stateSaved = safeNumber(state?.saved);
-  const stateTarget = safeNumber(state?.target);
-  const usdcBalance = safeNumber(vaultSummary?.balance ?? stateSaved);
-  const vaultGoal = Math.max(safeNumber(vaultSummary?.goalAmount ?? stateTarget), 1);
-  const vaultProgress = safeNumber(vaultSummary?.progress) > 0
-    ? Math.min(100, safeNumber(vaultSummary?.progress))
-    : (stateTarget > 0 ? Math.min(100, (stateSaved / stateTarget) * 100) : 0);
-  const vaultRemaining = Math.max(vaultGoal - usdcBalance, 0);
+  const usdcBalance = safeNumber(vaultSummary?.balance ?? safeNumber(state?.saved));
   const totalEquivalentInPhp = walletUsdcBalance * phpRate;
   const purchasingPowerSaved = walletUsdcBalance * (phpRate * 0.06);
-  const recentPreview = history.slice(0, 3);
 
-  const greeting = () => {
-    const h = new Date().getHours();
-    if (h < 12) return 'Good morning';
-    if (h < 18) return 'Good afternoon';
-    return 'Good evening';
-  };
+return (
+  <div className="max-w-md mx-auto min-h-210 bg-[#FAF8F5] rounded-[2.5rem] overflow-hidden shadow-xl relative flex flex-col justify-between font-sans tracking-tight border border-slate-200/40 text-[#1A1A1A]">
+    
+    <div className="flex-1 pb-36 overflow-y-auto">
+      <div className="px-6 pt-7 flex justify-between items-center" />
 
-  const identity = publicKey ? `${publicKey.slice(0, 4)}…${publicKey.slice(-4)}` : 'Guest';
+      {activeTab === 'home' && (
+        <>
+          <div className="mx-4 mt-5 p-6 rounded-2xl bg-linear-to-br from-[#FF9F1C] to-[#F37A00] text-white shadow-md relative overflow-hidden">
+            <div className="absolute right-4 top-1/2 -translate-y-1/2 w-28 h-28 bg-white/10 rounded-xl pointer-events-none before:content-[''] before:absolute before:-top-4 before:left-1/2 before:-translate-x-1/2 before:w-16 before:h-16 before:border-[6px] before:border-white/10 before:rounded-t-full" />
+            <div className="absolute right-14 top-1/2 -translate-y-1/2 w-3 h-3 bg-white/20 rounded-full pointer-events-none" />
 
-  /* ---------- Render ---------- */
-
-  return (
-    <div className="max-w-md mx-auto min-h-210 bg-[#FAF8F5] rounded-[3.2rem] overflow-hidden shadow-2xl relative flex flex-col justify-between font-sans border border-slate-200/50">
-
-      {/* Primary Scroll Container */}
-      <div className="flex-1 pb-36 overflow-y-auto">
-
-        {/* Global Structural Layout Header */}
-        <div className="px-6 pt-7 flex justify-between items-center">
-          
-        </div>
-
-        {/* === MAIN HOME INTERFACE === */}
-        {activeTab === 'home' && (
-          <>
-            {/* The Master Card Element */}
-            <div className="mx-4 mt-5 p-7 rounded-[2.2rem] bg-linear-to-br from-[#FF7A1A] to-[#FF4E00] text-white shadow-xl shadow-orange-700/10 relative overflow-hidden ring-10 ring-cyan-300/30">
-              
-              <div className="space-y-3 relative z-10">
-                {/* Balance Toggle Field */}
-                <div className="flex items-center gap-2 text-white/70 text-xs font-bold tracking-wide uppercase">
-                  <span>Vault Assets</span>
-                  <button onClick={() => setShowBalance(!showBalance)} className="text-white/70 hover:text-white transition-colors">
-                    <EyeIcon className="w-4 h-4" />
-                  </button>
-                </div>
-
-                {/* Main Dynamic Ledger Row - Defaulted to PHP */}
-                <div className="flex items-baseline gap-1.5">
-                  <span className="text-2xl font-black text-orange-100 opacity-90 font-sans">₱</span>
-                  {loading ? (
-                    <h1 className="text-4xl font-black text-orange-200/50">Loading…</h1>
-                  ) : (
-                    <h1 className="text-5xl font-black tracking-tight">
-                      {showBalance ? totalEquivalentInPhp.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '••••••'}
-                    </h1>
-                  )}
-                  <span className="text-xs font-bold text-orange-100/80 uppercase tracking-wider ml-1 font-sans">PHP</span>
-                </div>
-
-                {/* Sub-conversion Asset Array - Shows underlying USDC */}
-                <div className="pt-2 border-t border-white/10 flex items-center gap-4">
-                  <div className="inline-block bg-white/15 px-3 py-1 rounded-xl text-xs font-black">
-                    USDC ▾
-                  </div>
-                  <span className="text-xs font-bold text-orange-50/80 font-mono">
-                    {showBalance ? `${usdcBalance.toLocaleString(undefined, { minimumFractionDigits: 2 })} USDC` : '•••••• USDC'}
-                  </span>
-                </div>
+            <div className="space-y-1.5 relative z-10">
+              <div className="flex items-center gap-2 text-white/80 text-[11px] tracking-wider uppercase font-normal">
+                <span>Total Balance</span>
+                <button 
+                  onClick={() => setShowBalance(!showBalance)} 
+                  className="text-white/60 hover:text-white transition-colors"
+                  aria-label="Toggle balance visibility"
+                >
+                  <EyeIcon className="w-3.5 h-3.5" />
+                </button>
               </div>
+
+              <div className="flex items-baseline gap-1">
+                <span className="text-xl font-light text-white/90">₱</span>
+                {loading ? (
+                  <h1 className="text-xl font-light text-white/60">Loading…</h1>
+                ) : (
+                  <h1 className="text-3xl font-medium tracking-tight leading-tight">
+                    {showBalance ? totalEquivalentInPhp.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '••••••'}
+                  </h1>
+                )}
+              </div>
+                
+              <span className="text-xs font-normal tracking-wide text-white/80 block">
+                {showBalance ? `${usdcBalance.toLocaleString(undefined, { minimumFractionDigits: 2 })} USDC` : '•••••• USDC'}
+              </span>
             </div>
+          </div>
 
             {/* Spinning Dial Core Wrapper */}
-            <div className="mt-6">
+            <div className="my-17">
               <Wheel 
                 activeTab={activeTab} 
                 panel={panel} 
@@ -457,45 +420,44 @@ export default function SavingsDashboard({ publicKey, wallet }: DashboardProps) 
               />
             </div>
 
-            
             {/* Slide Inline Configuration Panels */}
             {panel && (
-              <div className="mx-4 mt-2 p-5 bg-white rounded-3xl border border-slate-100 shadow-md space-y-4">
+              <div className="mx-4 mt-2 space-y-3">
                 {(error || msg || transferState.status !== 'idle') && (
-                  <div className="p-1.5 space-y-1">
-                    {error && <p className="text-xs font-bold text-rose-500">{error}</p>}
-                    {msg && <p className="flex items-center gap-1 text-xs font-bold text-emerald-600"><SparkleStar className="w-3 h-3" />{msg}</p>}
-                    {transferState.status !== 'idle' && <p className="text-xs font-medium text-slate-400 font-mono">{transferState.message}</p>}
+                  <div className="p-3 bg-white rounded-xl border border-slate-100 space-y-1 text-[11px]">
+                    {error && <p className="text-rose-500 font-light">{error}</p>}
+                    {msg && <p className="flex items-center gap-1 text-emerald-600 font-light"><SparkleStar className="w-3 h-3" />{msg}</p>}
+                    {transferState.status !== 'idle' && <p className="text-slate-400 font-light">{transferState.message}</p>}
                   </div>
                 )}
 
                 {needsPin && (
-                  <div className="rounded-xl border border-orange-100 bg-orange-50/60 p-4 space-y-3">
-                    <p className="text-xs font-bold text-slate-700">
-                      Your session timed out. Enter your PIN to continue.
+                  <div className="rounded-2xl bg-white border border-slate-100 p-5 text-[#1A1A1A] space-y-3">
+                    <p className="text-[10px] uppercase tracking-wider text-slate-400 font-light">
+                      Enter PIN
                     </p>
                     <input
                       type="password"
                       inputMode="numeric"
                       value={pinInput}
                       onChange={(e) => setPinInput(e.target.value)}
-                      placeholder="Enter PIN"
+                      placeholder="••••"
                       disabled={unlocking}
-                      className="w-full rounded-xl bg-white border border-slate-200 px-3.5 py-2.5 text-sm text-slate-700 outline-none focus:border-orange-300 disabled:opacity-50"
+                      className="w-full rounded-xl bg-slate-50 border border-slate-100 px-3.5 py-2.5 text-xs outline-none focus:border-[#A0F0F0] disabled:opacity-50"
                     />
-                    {pinError && <p className="text-[11px] font-bold text-rose-600">{pinError}</p>}
+                    {pinError && <p className="text-[10px] text-rose-500">{pinError}</p>}
                     <div className="flex gap-2">
                       <button
                         onClick={handleUnlockAndRetry}
                         disabled={unlocking || !pinInput}
-                        className="flex-1 rounded-xl bg-[#FF5E00] py-2.5 text-xs font-bold text-white disabled:opacity-40"
+                        className="flex-1 rounded-xl bg-linear-to-r from-[#FF9F1C] to-[#F37A00] text-white py-2.5 text-[10px] uppercase tracking-widest font-normal disabled:opacity-40"
                       >
-                        {unlocking ? 'Unlocking…' : 'Unlock & Continue'}
+                        {unlocking ? 'Unlocking…' : 'Unlock'}
                       </button>
                       <button
                         onClick={() => { setNeedsPin(false); setPinInput(''); setPinError(''); setPendingRetry(null); }}
                         disabled={unlocking}
-                        className="rounded-xl bg-slate-100 px-4 py-2.5 text-xs font-bold text-slate-600 disabled:opacity-40"
+                        className="rounded-xl bg-slate-50 border border-slate-100 px-4 py-2.5 text-[10px] uppercase tracking-wider text-slate-400"
                       >
                         Cancel
                       </button>
@@ -503,154 +465,178 @@ export default function SavingsDashboard({ publicKey, wallet }: DashboardProps) 
                   </div>
                 )}
 
-                {/* DEPOSIT CONTAINER */}
-                {panel === 'deposit' && (
-                  <div className="space-y-3">
-                    <div className="flex justify-between items-center">
-                      <label className="block text-[10px] font-black uppercase tracking-wider text-slate-400">Deposit Amount</label>
-                      <span className="text-[11px] font-bold text-slate-400 font-mono">Currency: USDC</span>
-                    </div>
-
-                    <div className="relative flex items-center">
-                      <input
-                        type="number" 
-                        value={depositAmount} 
-                        onChange={(e) => setDepositAmount(e.target.value)} 
-                        placeholder="0.00" 
-                        disabled={busy}
-                        className="w-full rounded-xl border border-slate-200 bg-slate-50/50 pl-4 pr-16 py-3.5 text-base font-bold text-slate-800 placeholder-slate-300 focus:outline-none focus:border-orange-500 disabled:opacity-50"
-                      />
-                      <span className="absolute right-4 text-xs font-black text-slate-400">USDC</span>
-                    </div>
-
-                    {/* LIVE VISIBLE PHP EQUIVALENT ESTIMATE BOX */}
-                    <div className="bg-orange-50/50 border border-orange-100/50 rounded-xl px-4 py-2.5 flex justify-between items-center">
-                      <span className="text-[10px] font-black uppercase text-slate-400 tracking-wider">Estimated Value</span>
-                      <span className="text-sm font-black text-[#FF5E00]">
-                        ₱{((Number(depositAmount) || 0) * phpRate).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} PHP
-                      </span>
-                    </div>
-
-                    <button onClick={handleDeposit} disabled={busy || loading || !depositAmount || Number(depositAmount) <= 0} className="w-full py-3.5 rounded-2xl bg-[#FF5E00] text-white text-xs font-black tracking-wider uppercase shadow-md shadow-orange-500/10 active:scale-[0.99] transition-transform disabled:opacity-40">
-                      {busy ? 'Processing Transaction…' : 'Execute Deposit'}
-                    </button>
-                  </div>
-                )}
-
-                {/* WITHDRAW CONTAINER */}
-                {panel === 'withdraw' && (
-                  <div className="space-y-3">
-                    <div className="flex justify-between items-center">
-                      <label className="block text-[10px] font-black uppercase tracking-wider text-slate-400">Withdraw Amount</label>
-                      <span className="text-[11px] font-bold text-slate-400 font-mono">Max: {usdcBalance.toFixed(2)} USDC</span>
-                    </div>
-                    
-                    <div className="relative flex items-center">
-                      <input
-                        type="number" 
-                        value={withdrawAmount} 
-                        onChange={(e) => setWithdrawAmount(e.target.value)} 
-                        placeholder="0.00" 
-                        disabled={busy}
-                        className="w-full rounded-xl border border-slate-200 bg-slate-50/50 pl-4 pr-24 py-3.5 text-base font-bold text-slate-800 placeholder-slate-300 focus:outline-none focus:border-orange-500 disabled:opacity-50"
-                      />
-                      <div className="absolute right-3 flex items-center gap-2">
-                        <span className="text-xs font-black text-slate-400">USDC</span>
-                        <button 
-                          onClick={() => setWithdrawAmount(Math.floor(usdcBalance).toString())}
-                          className="px-2 py-1 text-[10px] font-black tracking-wide text-[#FF5E00] bg-orange-50 rounded-md uppercase"
-                        >
-                          Max
-                        </button>
-                      </div>
-                    </div>
-
-                    {/* LIVE VISIBLE PHP EQUIVALENT ESTIMATE BOX */}
-                    <div className="bg-orange-50/50 border border-orange-100/50 rounded-xl px-4 py-2.5 flex justify-between items-center">
-                      <span className="text-[10px] font-black uppercase text-slate-400 tracking-wider">Estimated Value</span>
-                      <span className="text-sm font-black text-[#FF5E00]">
-                        ₱{((Number(withdrawAmount) || 0) * phpRate).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} PHP
-                      </span>
-                    </div>
-
-                    <button onClick={handleWithdraw} className="w-full py-3.5 mt-1 rounded-2xl bg-slate-200 text-slate-500 text-xs font-black tracking-wider uppercase cursor-not-allowed">
-                      Coming Soon
-                    </button>
-                  </div>
-                )}
-
-                {/* RECEIVE CONTAINER */}
-                {panel === 'receive' && publicKey && (
-                  <div className="space-y-4">
-                    <div className="grid grid-cols-2 p-1 bg-slate-100 rounded-xl">
+                {/* ---------- DEPOSIT & RECEIVE COMBINED CONTAINER ---------- */}
+                {(panel === 'deposit' || panel === 'receive') && (
+                  <div className="rounded-2xl bg-white border border-slate-100 p-5 text-[#1A1A1A] space-y-4 animate-fadeIn">
+                    <div className="grid grid-cols-2 p-0.5 bg-slate-50 border border-slate-100 rounded-xl">
                       <button 
-                        onClick={() => setReceiveMode('address')}
-                        className={`py-1.5 text-[10px] font-black uppercase tracking-wider rounded-lg transition-all ${receiveMode === 'address' ? 'bg-white text-slate-900 shadow-xs' : 'text-slate-400'}`}
+                        type="button"
+                        onClick={() => setPanel('deposit')}
+                        className={`py-1.5 text-[10px] uppercase tracking-wider rounded-lg transition-all ${panel === 'deposit' ? 'bg-[#E0FBFB] text-slate-800' : 'text-slate-400 font-light'}`}
                       >
-                        My Address
+                        Deposit
                       </button>
                       <button 
-                        onClick={() => setReceiveMode('qr')}
-                        className={`py-1.5 text-[10px] font-black uppercase tracking-wider rounded-lg transition-all ${receiveMode === 'qr' ? 'bg-white text-slate-900 shadow-xs' : 'text-slate-400'}`}
+                        type="button"
+                        onClick={() => { setPanel('receive'); setReceiveMode('address'); }}
+                        className={`py-1.5 text-[10px] uppercase tracking-wider rounded-lg transition-all ${panel === 'receive' ? 'bg-[#E0FBFB] text-slate-800' : 'text-slate-400 font-light'}`}
                       >
-                        Show QR Code
+                        Receive
                       </button>
                     </div>
 
-                    {receiveMode === 'address' ? (
+                    {panel === 'deposit' && (
                       <div className="space-y-3 animate-fadeIn">
-                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-wider">Stellar Vault Address</p>
-                        <p className="break-all rounded-xl border border-slate-100 bg-slate-50/50 px-3 py-3 font-mono text-xs text-slate-700 leading-normal">{publicKey}</p>
-                        <button onClick={handleCopyAddress} className="w-full py-2.5 rounded-xl bg-slate-100 text-slate-800 text-xs font-bold active:bg-slate-200 transition-colors">
-                          {copied ? 'Copied Securely!' : 'Copy to Clipboard'}
-                        </button>
-                      </div>
-                    ) : (
-                      <div className="flex flex-col items-center justify-center p-4 space-y-3 animate-fadeIn">
-                        <div className="w-40 h-40 bg-white border border-slate-200 p-2 rounded-2xl shadow-inner flex items-center justify-center relative">
-                          <div className="absolute inset-0 bg-slate-900/5 flex items-center justify-center rounded-2xl">
-                            <div className="w-28 h-28 border-[3px] border-slate-800 flex flex-wrap p-1 gap-1 bg-white">
-                              <div className="w-8 h-8 bg-slate-800" />
-                              <div className="w-8 h-8 bg-transparent" />
-                              <div className="w-8 h-8 bg-slate-800" />
-                              <div className="w-full h-2 bg-slate-800" />
-                              <div className="w-6 h-6 bg-slate-800" />
-                              <div className="w-10 h-6 bg-slate-800" />
-                            </div>
+                        <div className="space-y-1">
+                          <label className="block text-[10px] uppercase tracking-wider text-slate-400 font-light">Amount</label>
+                          <div className="relative flex items-center">
+                            <input
+                              type="number" 
+                              value={depositAmount} 
+                              onChange={(e) => setDepositAmount(e.target.value)} 
+                              placeholder="0.00" 
+                              disabled={busy}
+                              className="w-full rounded-xl bg-slate-50 border border-slate-100 pl-4 pr-16 py-2.5 text-xs text-slate-800 outline-none focus:border-[#A0F0F0] disabled:opacity-50 transition-colors"
+                            />
+                            <span className="absolute right-4 text-[10px] text-slate-400">USDC</span>
                           </div>
                         </div>
-                        <span className="text-[10px] font-black tracking-widest text-slate-400 uppercase">Scan to send assets</span>
+
+                        <div className="bg-slate-50/50 px-3 py-2 flex justify-between items-center text-[10px]">
+                          <span className="uppercase text-slate-400 font-light tracking-wider">Value</span>
+                          <span className="text-slate-500">
+                            ₱{((Number(depositAmount) || 0) * phpRate).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                          </span>
+                        </div>
+
+                        <button 
+                          onClick={handleDeposit} 
+                          disabled={busy || loading || !depositAmount || Number(depositAmount) <= 0} 
+                          className="w-full py-3 rounded-xl bg-linear-to-r from-[#FF9F1C] to-[#F37A00] text-white text-[10px] uppercase tracking-widest hover:opacity-95 transition-opacity disabled:opacity-40 flex items-center justify-center gap-2"
+                        >
+                          {busy && (
+                            <svg className="animate-spin h-3 w-3 text-white" fill="none" viewBox="0 0 24 24">
+                              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                            </svg>
+                          )}
+                          <span>{busy ? 'Processing...' : 'Deposit'}</span>
+                        </button>
+                      </div>
+                    )}
+
+                    {panel === 'receive' && publicKey && (
+                      <div className="space-y-3 animate-fadeIn">
+                        <div className="grid grid-cols-2 p-0.5 bg-slate-50 border border-slate-100 rounded-lg">
+                          <button 
+                            onClick={() => setReceiveMode('address')}
+                            className={`py-1 text-[9px] uppercase tracking-wider rounded-md transition-all ${receiveMode === 'address' ? 'bg-[#E0FBFB] text-slate-800' : 'text-slate-400 font-light'}`}
+                          >
+                            My Address
+                          </button>
+                          <button 
+                            onClick={() => setReceiveMode('qr')}
+                            className={`py-1 text-[9px] uppercase tracking-wider rounded-md transition-all ${receiveMode === 'qr' ? 'bg-[#E0FBFB] text-slate-800' : 'text-slate-400 font-light'}`}
+                          >
+                            QR Code
+                          </button>
+                        </div>
+
+                        {receiveMode === 'address' ? (
+                          <div className="space-y-2 animate-fadeIn">
+                            <p className="break-all rounded-xl border border-slate-100 bg-slate-50 p-3 text-[11px] text-slate-500 leading-relaxed font-mono">{publicKey}</p>
+                            <button 
+                              onClick={handleCopyAddress} 
+                              className="w-full py-2.5 rounded-xl bg-[#E0FBFB] text-slate-800 text-[10px] uppercase tracking-wider font-light"
+                            >
+                              {copied ? 'Copied Securely' : 'Copy Key'}
+                            </button>
+                          </div>
+                        ) : (
+                          <div className="flex flex-col items-center justify-center py-4 space-y-2 animate-fadeIn">
+                            <div className="w-28 h-28 bg-white border border-slate-100 p-2 rounded-xl flex items-center justify-center relative">
+                              <div className="absolute inset-0 bg-slate-50 flex items-center justify-center rounded-xl">
+                                <div className="w-16 h-16 border-2 border-slate-800 flex flex-wrap p-1 gap-1 bg-white">
+                                  <div className="w-4 h-4 bg-slate-800" />
+                                  <div className="w-4 h-4 bg-transparent" />
+                                  <div className="w-4 h-4 bg-slate-800" />
+                                  <div className="w-full h-0.5 bg-slate-800" />
+                                  <div className="w-3 h-3 bg-slate-800" />
+                                  <div className="w-5 h-3 bg-slate-800" />
+                                </div>
+                              </div>
+                            </div>
+                            <span className="text-[9px] uppercase tracking-widest text-slate-400 font-light">Awaiting Sync</span>
+                          </div>
+                        )}
                       </div>
                     )}
                   </div>
                 )}
 
-                {/* SEND CONTAINER */}
-                {panel === 'send' && (
-                  <div className="space-y-4">
-                    <div>
-                      <h4 className="text-sm font-black text-slate-900 uppercase tracking-wider">Send Assets</h4>
-                      <p className="text-[11px] text-slate-400 font-medium">Multi-sig flow requiring reciprocal action clearance before deployment.</p>
+                {/* ---------- WITHDRAW CONTAINER ---------- */}
+                {panel === 'withdraw' && (
+                  <div className="rounded-2xl bg-white border border-slate-100 p-5 text-[#1A1A1A] space-y-4 animate-fadeIn">
+                    <div className="space-y-1">
+                      <div className="flex justify-between items-baseline">
+                        <label className="block text-[10px] uppercase tracking-wider text-slate-400 font-light">Withdraw</label>
+                        <span className="text-[9px] text-slate-400 font-light">Balance: {usdcBalance.toFixed(2)}</span>
+                      </div>
+                      <div className="relative flex items-center">
+                        <input
+                          type="number" 
+                          value={withdrawAmount} 
+                          onChange={(e) => setWithdrawAmount(e.target.value)} 
+                          placeholder="0.00" 
+                          disabled={busy}
+                          className="w-full rounded-xl bg-slate-50 border border-slate-100 pl-4 pr-20 py-2.5 text-xs text-slate-800 outline-none focus:border-[#A0F0F0] transition-colors"
+                        />
+                        <div className="absolute right-2 flex items-center gap-1">
+                          <span className="text-[10px] text-slate-400 mr-1">USDC</span>
+                          <button 
+                            onClick={() => setWithdrawAmount(Math.floor(usdcBalance).toString())}
+                            className="px-1.5 py-0.5 text-[9px] text-slate-600 bg-[#E0FBFB] rounded uppercase font-light"
+                          >
+                            Max
+                          </button>
+                        </div>
+                      </div>
                     </div>
 
+                    <div className="bg-slate-50/50 px-3 py-2 flex justify-between items-center text-[10px]">
+                      <span className="uppercase text-slate-400 font-light tracking-wider">Fiat Value</span>
+                      <span className="text-slate-500">
+                        ₱{((Number(withdrawAmount) || 0) * phpRate).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      </span>
+                    </div>
+
+                    <button disabled className="w-full py-3 rounded-xl bg-slate-50 text-slate-300 text-[10px] uppercase tracking-widest cursor-not-allowed font-light">
+                      Feature Pending
+                    </button>
+                  </div>
+                )}
+
+                {/* ---------- SEND CONTAINER ---------- */}
+                {panel === 'send' && (
+                  <div className="rounded-2xl bg-white border border-slate-100 p-5 text-[#1A1A1A] space-y-4 animate-fadeIn">
                     {!publicKey ? (
-                      <p className="p-4 rounded-2xl bg-slate-50 text-xs text-slate-400 font-medium">Verify structural keys to invoke transmission parameters.</p>
+                      <p className="p-4 bg-slate-50 text-[10px] text-slate-400 font-light text-center">Verify parameters to initialize transfer.</p>
                     ) : (
-                      <div className="space-y-4">
-                        <div className="grid grid-cols-2 p-1 bg-slate-100 rounded-xl">
+                      <div className="space-y-3">
+                        <div className="grid grid-cols-2 p-0.5 bg-slate-50 border border-slate-100 rounded-xl">
                           <button 
                             type="button"
                             onClick={() => setSendMode('amount')}
-                            className={`py-1.5 text-[10px] font-black uppercase tracking-wider rounded-lg transition-all ${sendMode === 'amount' ? 'bg-white text-slate-900 shadow-xs' : 'text-slate-400'}`}
+                            className={`py-1.5 text-[10px] uppercase tracking-wider rounded-lg transition-all ${sendMode === 'amount' ? 'bg-[#E0FBFB] text-slate-800' : 'text-slate-400 font-light'}`}
                           >
-                            Enter Amount
+                            Enter
                           </button>
                           <button 
                             type="button"
                             onClick={() => setSendMode('qr')}
-                            className={`py-1.5 text-[10px] font-black uppercase tracking-wider rounded-lg transition-all ${sendMode === 'qr' ? 'bg-white text-slate-900 shadow-xs' : 'text-slate-400'}`}
+                            className={`py-1.5 text-[10px] uppercase tracking-wider rounded-lg transition-all ${sendMode === 'qr' ? 'bg-[#E0FBFB] text-slate-800' : 'text-slate-400 font-light'}`}
                           >
-                            Scan QR Code
+                            Scan
                           </button>
                         </div>
 
@@ -658,101 +644,113 @@ export default function SavingsDashboard({ publicKey, wallet }: DashboardProps) 
                           <>
                             {!pendingApproval && (
                               <div className="space-y-3 animate-fadeIn">
-                                <div className="space-y-1.5">
-                                  <label className="block text-[10px] font-black uppercase tracking-wider text-slate-400">Recipient Account Destination</label>
+                                <div className="space-y-1">
+                                  <label className="block text-[10px] uppercase tracking-wider text-slate-400 font-light">Address</label>
                                   <input
-                                    type="text" value={recipient} onChange={(e) => setRecipient(e.target.value)} placeholder="G..." disabled={busy}
-                                    className="w-full rounded-xl border border-slate-200 bg-slate-50/50 px-3 py-3 text-xs font-mono text-slate-800 placeholder-slate-300 focus:outline-none focus:border-orange-500 disabled:opacity-50"
+                                    type="text" 
+                                    value={recipient} 
+                                    onChange={(e) => setRecipient(e.target.value)} 
+                                    placeholder="Stellar Public Address (G...)" 
+                                    disabled={busy}
+                                    className="w-full rounded-xl bg-slate-50 border border-slate-100 px-3 py-2 text-[11px] font-mono text-slate-600 outline-none focus:border-[#A0F0F0] transition-colors"
                                   />
                                 </div>
-                                <div className="space-y-1.5">
-                                  <label className="block text-[10px] font-black uppercase tracking-wider text-slate-400">Payload Volume (USDC)</label>
+                                <div className="space-y-1">
+                                  <label className="block text-[10px] uppercase tracking-wider text-slate-400 font-light">Amount</label>
                                   <div className="relative flex items-center">
                                     <input
-                                      type="number" value={transferAmount} onChange={(e) => setTransferAmount(e.target.value)} placeholder="0.00" disabled={busy}
-                                      className="w-full rounded-xl border border-slate-200 bg-slate-50/50 pl-3 pr-16 py-3 text-sm font-bold text-slate-800 placeholder-slate-300 focus:outline-none focus:border-orange-500 disabled:opacity-50"
+                                      type="number" 
+                                      value={transferAmount} 
+                                      onChange={(e) => setTransferAmount(e.target.value)} 
+                                      placeholder="0.00" 
+                                      disabled={busy}
+                                      className="w-full rounded-xl bg-slate-50 border border-slate-100 pl-4 pr-14 py-2.5 text-xs text-slate-800 outline-none focus:border-[#A0F0F0] transition-colors"
                                     />
-                                    <span className="absolute right-4 text-xs font-black text-slate-400">USDC</span>
+                                    <span className="absolute right-4 text-[10px] text-slate-400">USDC</span>
                                   </div>
                                 </div>
 
-                                {/* LIVE VISIBLE PHP EQUIVALENT ESTIMATE BOX */}
-                                <div className="bg-orange-50/50 border border-orange-100/50 rounded-xl px-4 py-2.5 flex justify-between items-center">
-                                  <span className="text-[10px] font-black uppercase text-slate-400 tracking-wider">Estimated Value</span>
-                                  <span className="text-sm font-black text-[#FF5E00]">
-                                    ₱{((Number(transferAmount) || 0) * phpRate).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} PHP
-                                  </span>
-                                </div>
-
-                                <button onClick={handleTransferRequest} disabled={!recipient || !transferAmount || busy} className="w-full py-3.5 mt-2 rounded-2xl bg-[#FF5E00] text-white text-xs font-black uppercase tracking-widest disabled:opacity-40 shadow-md shadow-orange-500/10">
-                                  {busy ? 'Constructing Flow…' : 'Initialize Multi-Sig Stream'}
+                                <button 
+                                  type="button"
+                                  onClick={handleTransferRequest}
+                                  disabled={!recipient || !transferAmount || Number(transferAmount) <= 0}
+                                  className="w-full py-3 rounded-xl bg-linear-to-r from-[#FF9F1C] to-[#F37A00] text-white text-[10px] uppercase tracking-widest hover:opacity-95 transition-opacity disabled:opacity-40"
+                                >
+                                  Request
                                 </button>
                               </div>
                             )}
 
                             {pendingApproval && (
-                              <div className="space-y-3 rounded-2xl border border-slate-100 bg-slate-50/50 p-4 text-xs text-slate-600">
-                                <div className="flex items-center justify-between">
-                                  <span className="font-black text-slate-800 uppercase tracking-wide">Stream Phase</span>
-                                  <span className="rounded-full bg-orange-100 px-3 py-1 text-[10px] uppercase tracking-wider text-[#FF5E00] font-black">{pendingApproval.status}</span>
+                              <div className="rounded-xl border border-slate-100 bg-slate-50/50 p-4 space-y-3 text-[11px] animate-fadeIn">
+                                <div className="flex justify-between items-center border-b border-slate-100 pb-2">
+                                  <span className="text-[10px] uppercase text-slate-400 font-light tracking-wider">Pending Tx</span>
+                                  <span className="font-normal text-slate-800">{pendingApproval.amount} USDC</span>
                                 </div>
-                                <div className="space-y-1.5 text-[11px] text-slate-500 font-mono">
-                                  <p className="truncate">Source: {pendingApproval.sender}</p>
-                                  <p className="truncate">Target: {pendingApproval.recipient}</p>
-                                  <div className="flex justify-between items-center mt-2 bg-white p-2 rounded-lg border border-slate-100">
-                                    <span className="font-sans font-bold text-slate-800 text-xs">Value: {pendingApproval.amount.toFixed(2)} USDC</span>
-                                    <span className="font-sans font-black text-[#FF5E00] text-xs">₱{(pendingApproval.amount * phpRate).toLocaleString(undefined, { minimumFractionDigits: 2 })} PHP</span>
+                                <div className="space-y-0.5 text-slate-400 font-light text-[10px]">
+                                  <p className="truncate"><span className="uppercase tracking-wide">From:</span> {pendingApproval.sender}</p>
+                                  <p className="truncate"><span className="uppercase tracking-wide">To:</span> {pendingApproval.recipient}</p>
+                                </div>
+
+                                <div className="grid grid-cols-2 gap-2 text-[9px] tracking-wide text-center uppercase font-light">
+                                  <div className={`p-1.5 rounded-lg border ${pendingApproval.senderAuthorized ? 'bg-[#E0FBFB] border-[#A0F0F0] text-slate-700' : 'bg-slate-50 border-slate-100 text-slate-400'}`}>
+                                    Sender {pendingApproval.senderAuthorized ? '✓' : '○'}
+                                  </div>
+                                  <div className={`p-1.5 rounded-lg border ${pendingApproval.receiverAuthorized ? 'bg-[#E0FBFB] border-[#A0F0F0] text-slate-700' : 'bg-slate-50 border-slate-100 text-slate-400'}`}>
+                                    Receiver {pendingApproval.receiverAuthorized ? '✓' : '○'}
                                   </div>
                                 </div>
-                                <div className="flex flex-col gap-2 pt-2">
-                                  {publicKey === pendingApproval.sender && !pendingApproval.senderAuthorized && (
-                                    <button onClick={handleApproveAsSender} disabled={busy} className="w-full rounded-xl bg-[#FF5E00] px-3 py-2.5 font-bold text-white disabled:opacity-50 text-xs uppercase tracking-wider shadow-md shadow-orange-500/10">Approve as Signatory Source</button>
+
+                                <div className="flex gap-2 pt-1">
+                                  {pendingApproval.sender === publicKey && !pendingApproval.senderAuthorized && (
+                                    <button type="button" onClick={handleApproveAsSender} className="flex-1 py-2.5 rounded-xl bg-linear-to-r from-[#FF9F1C] to-[#F37A00] text-white text-[10px] uppercase tracking-wider">
+                                      Sign Sender
+                                    </button>
                                   )}
-                                  {publicKey === pendingApproval.recipient && !pendingApproval.receiverAuthorized && (
-                                    <button onClick={handleApproveAsReceiver} disabled={busy} className="w-full rounded-xl bg-[#FF5E00] px-3 py-2.5 font-bold text-white disabled:opacity-50 text-xs uppercase tracking-wider shadow-md shadow-orange-500/10">Approve as Target Registry</button>
+                                  {pendingApproval.recipient === publicKey && !pendingApproval.receiverAuthorized && (
+                                    <button type="button" onClick={handleApproveAsReceiver} className="flex-1 py-2.5 rounded-xl bg-linear-to-r from-[#FF9F1C] to-[#F37A00] text-white text-[10px] uppercase tracking-wider">
+                                      Sign Receiver
+                                    </button>
                                   )}
-                                  {pendingApproval.senderAuthorized && pendingApproval.receiverAuthorized && publicKey === pendingApproval.sender && (
-                                    <button onClick={handleSubmitApprovedTransfer} disabled={busy} className="w-full rounded-xl bg-[#FF5E00] px-3 py-2.5 font-black text-white disabled:opacity-50 text-xs uppercase tracking-wider shadow-md shadow-orange-500/10">Submit Block payload</button>
+                                  {pendingApproval.sender === publicKey && pendingApproval.senderAuthorized && pendingApproval.receiverAuthorized && (
+                                    <button type="button" onClick={handleSubmitApprovedTransfer} disabled={busy} className="flex-1 py-2.5 rounded-xl bg-linear-to-r from-[#FF9F1C] to-[#F37A00] text-white text-[10px] uppercase tracking-widest font-normal">
+                                      {busy ? 'Processing…' : 'Submit Payload'}
+                                    </button>
                                   )}
+                                  <button 
+                                    type="button" 
+                                    onClick={() => { removePendingTransferApproval(pendingApproval.id); setError(''); setMsg(''); }}
+                                    className="px-3 py-2.5 rounded-xl bg-slate-100 text-slate-400 text-[10px] uppercase tracking-wide"
+                                  >
+                                    Void
+                                  </button>
                                 </div>
                               </div>
                             )}
                           </>
                         ) : (
-                          <div className="flex flex-col items-center justify-center p-6 border-2 border-dashed border-slate-200 rounded-2xl bg-slate-50/50 space-y-3 animate-fadeIn">
-                            <svg className="w-10 h-10 text-slate-400 stroke-current" fill="none" strokeWidth="2" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" d="M6 4h4v4H6V4zm10 0h4v4h-4V4zM6 14h4v4H6v-4zm10 2h2v2h-2v-2zm2-2h2v2h-2v-2zm-2-2h2v2h-2v-2zm-2 2h2v2h-2v-2zm0-4h2v2h-2v-2zm2 0h2v2h-2v-2z" />
-                            </svg>
-                            <span className="text-[11px] font-bold text-slate-500">Camera Permission Request Pending…</span>
-                            <button 
-                              type="button"
-                              onClick={() => {
-                                setRecipient('GBCNM4ZQXH5X2WRNZV2TL6NQUU6NMX4XF6OQWLSK3LCE5WXT5E6MSTELLA');
-                                setTransferAmount('100');
-                                setSendMode('amount');
-                                setMsg('Scanned data loaded successfully!');
-                              }}
-                              className="text-[10px] font-black uppercase text-[#FF5E00] bg-orange-50 px-2.5 py-1 rounded-md"
-                            >
-                              Mock Scan QR Code
-                            </button>
+                          <div className="flex flex-col items-center justify-center py-6 bg-slate-50 rounded-xl border border-dashed border-slate-200 text-center animate-fadeIn">
+                            <span className="text-[10px] uppercase tracking-widest text-slate-400 font-light">Open Camera</span>
                           </div>
                         )}
                       </div>
                     )}
                   </div>
                 )}
-              {/* CREATE VAULT CONTAINER */}
+
+                {/* ---------- CREATE VAULT CONTAINER ---------- */}
                 {panel === 'create' && publicKey && (
-                  <CreateVault
-                    publicKey={publicKey}
-                    onCreated={() => {
-                      setPanel(null);
-                      setMsg('Vault created successfully!');
-                      void refresh();
-                      setTimeout(() => setMsg(''), 3000);
-                    }}
-                  />
+                  <div className="rounded-2xl bg-white border border-slate-100 p-2 text-[#1A1A1A] animate-fadeIn">
+                    <CreateVault
+                      publicKey={publicKey}
+                      onCreated={() => {
+                        setPanel(null);
+                        setMsg('Vault initialized.');
+                        void refresh();
+                        setTimeout(() => setMsg(''), 3000);
+                      }}
+                    />
+                  </div>
                 )}
               </div>
             )}
@@ -782,6 +780,7 @@ export default function SavingsDashboard({ publicKey, wallet }: DashboardProps) 
             onLogout={onLogout}
           />
         )}
+        
         {/* === VAULT VIEW PANEL === */}
         {activeTab === 'vaults' && (
           <Vaults publicKey={publicKey} loading={loading} />
@@ -789,8 +788,8 @@ export default function SavingsDashboard({ publicKey, wallet }: DashboardProps) 
 
       </div>
 
-      {/* Mockup Fixed Floating Dock Menu */}
-      <div className="absolute bottom-0 inset-x-0 bg-white/95 backdrop-blur-md border-t border-slate-200/60 px-3 pt-4 pb-8 flex justify-between items-center rounded-t-[2.4rem] shadow-xl shadow-slate-900/10 z-40">
+      {/* Fixed Floating Dock Menu */}
+      <div className="absolute bottom-0 inset-x-0 bg-white/95 backdrop-blur-md border-t border-slate-200/50 px-4 pt-3 pb-7 flex justify-between items-center rounded-t-4xl shadow-sm z-40">
         {(['home', 'vaults', 'activity', 'profile'] as Tab[]).map((tab) => {
           const isSelected = activeTab === tab;
           
@@ -801,10 +800,10 @@ export default function SavingsDashboard({ publicKey, wallet }: DashboardProps) 
                 setActiveTab(tab);
                 setPanel(null);
               }}
-              className="flex flex-col items-center justify-center flex-1 relative py-2"
+              className="flex flex-col items-center justify-center flex-1 relative py-1.5"
             >
               {isSelected && (
-                <div className="absolute w-12 h-12 bg-[#9AFAFA] rounded-xl -z-10 opacity-70 scale-105 transition-all" />
+                <div className="absolute w-10 h-10 bg-[#9AFAFA] rounded-xl -z-10 opacity-40 scale-105 transition-all" />
               )}
               <NavIcon type={tab} active={isSelected} />
             </button>
