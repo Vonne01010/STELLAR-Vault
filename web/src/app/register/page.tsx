@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
@@ -27,7 +27,7 @@ export default function RegisterPage() {
   const [step, setStep] = useState<OnboardStep>('intro');
   const [publicKey, setPublicKey] = useState('');
 
-  // Profile fields — Level 0 requirements
+  // Profile fields â€” Level 0 requirements
   const [displayName, setDisplayName] = useState('');
   const [country, setCountry] = useState('Philippines');
   const [phone, setPhone] = useState('');
@@ -123,7 +123,7 @@ export default function RegisterPage() {
           }),
         });
       } catch {
-        // Non-fatal — the account still works locally even if this sync fails.
+        // Non-fatal â€” the account still works locally even if this sync fails.
         // The user isn't blocked from finishing onboarding over a backend hiccup.
       }
 
@@ -300,7 +300,7 @@ export default function RegisterPage() {
                   <label className="text-[10px] font-medium uppercase tracking-wider text-slate-400">Phone number</label>
                   <div className="flex gap-2">
                     <span className="border border-slate-200 rounded-xl px-3 py-3 text-xs font-medium bg-slate-50 text-slate-500 flex items-center">
-                      🇵🇭 +63
+                      ðŸ‡µðŸ‡­ +63
                     </span>
                     <input
                       type="tel"
@@ -371,18 +371,18 @@ export default function RegisterPage() {
 
               {/* Grid Number Input Pad Layout */}
               <div className="grid grid-cols-3 gap-x-4 gap-y-3 px-2">
-                {['1', '2', '3', '4', '5', '6', '7', '8', '9', '', '0', '⌫'].map((key, idx) => (
+                {['1', '2', '3', '4', '5', '6', '7', '8', '9', '', '0', 'âŒ«'].map((key, idx) => (
                   <button
                     key={idx}
                     onClick={() => {
-                      if (key === '⌫') handleOtpBackspace();
+                      if (key === 'âŒ«') handleOtpBackspace();
                       else if (key !== '') handleOtpDigit(key);
                     }}
                     disabled={key === '' || otpLoading}
                     className={`h-11 rounded-xl text-base font-medium flex items-center justify-center transition-all ${
                       key === ''
                         ? 'opacity-0 pointer-events-none'
-                        : key === '⌫'
+                        : key === 'âŒ«'
                         ? 'text-slate-400 active:scale-95'
                         : 'bg-white border border-amber-100/30 text-slate-600 active:scale-95'
                     }`}
@@ -427,7 +427,7 @@ export default function RegisterPage() {
         {/* Brand System Footer Deck Layout */}
         <div className="flex flex-col items-center space-y-4 pt-12">
           <span className="text-[10px] font-normal text-slate-400 tracking-normal">
-            © 2026 Team Ada's Lovelies. All rights reserved.
+            Â© 2026 Team Ada's Lovelies. All rights reserved.
           </span>
         </div>
 

@@ -37,4 +37,4 @@ export async function POST(request: Request) {
     console.error("User upsert error:", error)
     return Response.json({ error: "Failed to save user" }, { status: 500 })
   }
-}
+} 
