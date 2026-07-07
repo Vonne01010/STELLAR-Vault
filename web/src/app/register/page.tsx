@@ -131,17 +131,38 @@ export default function RegisterPage() {
       return;
     }
 
-    // Save profile with verificationLevel: 0 (Decoupled from seed backup)
-    saveProfile({
-      displayName: displayName.trim(),
-      country,
-      phoneNumber: phone,
-      phoneVerified: true,
-      tosAccepted: true,
-      email: email || undefined,
-      verificationLevel: 0, // Level 0 achieved; Level 1 will prompt for recovery words inside settings dashboard later
-      createdAt: new Date().toISOString(),
-    });
+    // Demo-only verification against the locally generated code.
+    setTimeout(async () => {
+      if (otpCode !== demoOtp) {
+        setOtpError('Incorrect code. Please try again.');
+        setOtpCode('');
+        setOtpLoading(false);
+        return;
+      }
+
+      saveProfile({
+        displayName: displayName.trim(),
+        country,
+        phoneNumber: phone,
+        phoneVerified: true,
+        tosAccepted: true,
+        email: email || undefined,
+        verificationLevel: 0,
+        createdAt: new Date().toISOString(),
+      });
+
+      try {
+        await authFetch('/api/users', {
+          method: 'POST',
+          body: JSON.stringify({
+            pubkey: publicKey,
+            username: displayName.trim(),
+          }),
+        });
+      } catch {
+        // Non-fatal — the account still works locally even if this sync fails.
+        // The user isn't blocked from finishing onboarding over a backend hiccup.
+      }
 
     setOtpLoading(false);
     setStep('done');
