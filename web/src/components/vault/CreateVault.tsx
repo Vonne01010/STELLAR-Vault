@@ -1,4 +1,5 @@
 'use client';
+
 import { useState } from 'react';
 import { buildCreateVaultXDR } from '@/lib/contract';
 import { submitSignedXDR, pollTransactionForResult } from '@/lib/payment';
@@ -9,17 +10,15 @@ type Status = 'idle' | 'building' | 'signing' | 'submitting' | 'confirming' | 's
 
 const STATUS_LABEL: Record<Status, string> = {
   idle: 'Create Vault',
-  building: 'Building transaction…',
-  signing: 'Waiting for signature…',
-  submitting: 'Submitting to network…',
-  confirming: 'Confirming on-chain…',
-  saving: 'Saving vault…',
+  building: 'Building…',
+  signing: 'Signing…',
+  submitting: 'Submitting…',
+  confirming: 'Verifying…',
+  saving: 'Saving…',
   success: 'Vault created!',
   error: 'Create Vault',
 };
 
-// Matches the exact message thrown by signWithCurrentAccount when the
-// in-memory secret key isn't available (e.g. after a page reload).
 const SESSION_KEY_MISSING_MESSAGE = 'Your session key is unavailable. Please unlock your account again.';
 
 export default function CreateVault({
@@ -37,8 +36,6 @@ export default function CreateVault({
   const [status, setStatus] = useState<Status>('idle');
   const [error, setError] = useState('');
 
-  // Re-auth prompt state — shown only if signing fails because the
-  // in-memory session key was cleared (e.g. after a reload).
   const [needsPin, setNeedsPin] = useState(false);
   const [pinInput, setPinInput] = useState('');
   const [pinError, setPinError] = useState('');
@@ -93,8 +90,6 @@ export default function CreateVault({
     } catch (e: unknown) {
       const message = e instanceof Error ? e.message : 'Vault creation failed';
 
-      // Instead of showing a dead-end error, offer an inline PIN re-entry
-      // so the user can pick up right where they left off.
       if (message === SESSION_KEY_MISSING_MESSAGE) {
         setNeedsPin(true);
         setStatus('idle');
@@ -113,7 +108,7 @@ export default function CreateVault({
       await walletService.unlockPinAccount(pinInput);
       setNeedsPin(false);
       setPinInput('');
-      await runCreateVault(); // retry automatically now that the key is back
+      await runCreateVault();
     } catch (e: unknown) {
       setPinError(e instanceof Error ? e.message : 'Incorrect PIN');
     } finally {
@@ -122,54 +117,61 @@ export default function CreateVault({
   };
 
   return (
-    <div className="rounded-4xl border border-violet-100/40 bg-white p-6 shadow-xl shadow-indigo-900/5 space-y-4">
-      <h2 className="text-sm font-black text-slate-800 tracking-tight uppercase">Create a Vault</h2>
+    <div className="bg-white p-5 text-[#1A1A1A] font-mono tracking-tight space-y-4 animate-fadeIn">
+      <div>
+        <h2 className="text-xs uppercase tracking-widest text-slate-400 font-light">New Vault</h2>
+      </div>
 
       <div className="space-y-1">
-        <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-400">Vault name</label>
+        <label className="block text-[10px] uppercase tracking-wider text-slate-400 font-light">Vault Name</label>
         <input
           type="text"
           value={name}
           onChange={(e) => setName(e.target.value)}
           placeholder="e.g. Emergency Fund"
           disabled={busy}
-          className="w-full rounded-xl bg-slate-50 border border-slate-100 px-3.5 py-2.5 text-sm text-slate-700 outline-none focus:border-violet-200 disabled:opacity-50"
+          className="w-full rounded-xl bg-slate-50 border border-slate-100 px-3.5 py-2.5 text-xs text-slate-800 outline-none focus:border-[#A0F0F0] disabled:opacity-50 transition-colors placeholder:text-slate-300"
         />
       </div>
 
       <div className="space-y-1">
-        <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-400">Description (optional)</label>
+        <label className="block text-[10px] uppercase tracking-wider text-slate-400 font-light">Description (Optional)</label>
         <input
           type="text"
           value={description}
           onChange={(e) => setDescription(e.target.value)}
+          placeholder="Description"
           disabled={busy}
-          className="w-full rounded-xl bg-slate-50 border border-slate-100 px-3.5 py-2.5 text-sm text-slate-700 outline-none focus:border-violet-200 disabled:opacity-50"
+          className="w-full rounded-xl bg-slate-50 border border-slate-100 px-3.5 py-2.5 text-xs text-slate-800 outline-none focus:border-[#A0F0F0] disabled:opacity-50 transition-colors placeholder:text-slate-300"
         />
       </div>
 
       <div className="grid grid-cols-2 gap-3">
         <div className="space-y-1">
-          <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-400">Type</label>
+          <label className="block text-[10px] uppercase tracking-wider text-slate-400 font-light">Vault Type</label>
           <select
             value={vaultType}
             onChange={(e) => setVaultType(e.target.value as 'Personal' | 'Collaborative')}
             disabled={busy}
-            className="w-full rounded-xl bg-slate-50 border border-slate-100 px-3.5 py-2.5 text-xs font-bold text-slate-700 outline-none focus:border-violet-200 disabled:opacity-50"
+            className="w-full rounded-xl bg-slate-50 border border-slate-100 px-3 py-2.5 text-xs font-light text-slate-600 outline-none focus:border-[#A0F0F0] disabled:opacity-50 cursor-pointer transition-colors"
           >
             <option value="Personal">Personal</option>
             <option value="Collaborative">Collaborative</option>
           </select>
         </div>
+
         <div className="space-y-1">
-          <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-400">Target (USDC)</label>
-          <input
-            type="number"
-            value={targetAmount}
-            onChange={(e) => setTargetAmount(e.target.value)}
-            disabled={busy}
-            className="w-full rounded-xl bg-slate-50 border border-slate-100 px-3.5 py-2.5 text-sm text-slate-700 outline-none focus:border-violet-200 disabled:opacity-50"
-          />
+          <label className="block text-[10px] uppercase tracking-wider text-slate-400 font-light">Target Amount</label>
+          <div className="relative flex items-center">
+            <input
+              type="number"
+              value={targetAmount}
+              onChange={(e) => setTargetAmount(e.target.value)}
+              disabled={busy}
+              className="w-full rounded-xl bg-slate-50 border border-slate-100 pl-3.5 pr-12 py-2.5 text-xs text-slate-800 outline-none focus:border-[#A0F0F0] disabled:opacity-50 transition-colors"
+            />
+            <span className="absolute right-3.5 text-[10px] text-slate-400">USDC</span>
+          </div>
         </div>
       </div>
 
@@ -177,39 +179,45 @@ export default function CreateVault({
         <button
           onClick={runCreateVault}
           disabled={busy || !name.trim() || Number(targetAmount) <= 0}
-          className="w-full rounded-xl bg-[#6C5DD3] py-3 text-xs font-bold text-white shadow-md shadow-indigo-900/10 hover:bg-[#5B4FBF] transition-all disabled:opacity-40 active:scale-[0.98]"
+          className="w-full py-3 rounded-xl bg-linear-to-r from-[#FF9F1C] to-[#F37A00] text-white text-[10px] uppercase tracking-widest hover:opacity-95 transition-opacity disabled:opacity-40 flex items-center justify-center gap-2 font-normal"
         >
-          {STATUS_LABEL[status]}
+          {busy && (
+            <svg className="animate-spin h-3 w-3 text-white" fill="none" viewBox="0 0 24 24">
+              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+            </svg>
+          )}
+          <span>{STATUS_LABEL[status]}</span>
         </button>
       )}
 
       {needsPin && (
-        <div className="rounded-xl border border-indigo-100 bg-indigo-50/60 p-4 space-y-3">
-          <p className="text-xs font-bold text-slate-700">
-            Your session timed out. Enter your PIN to continue creating this vault.
+        <div className="rounded-xl border border-slate-100 bg-slate-50/50 p-4 space-y-3">
+          <p className="text-[10px] uppercase tracking-wider text-slate-400 font-light">
+            Enter PIN
           </p>
           <input
             type="password"
             inputMode="numeric"
             value={pinInput}
             onChange={(e) => setPinInput(e.target.value)}
-            placeholder="Enter PIN"
+            placeholder="••••"
             disabled={unlocking}
-            className="w-full rounded-xl bg-white border border-slate-200 px-3.5 py-2.5 text-sm text-slate-700 outline-none focus:border-violet-300 disabled:opacity-50"
+            className="w-full rounded-xl bg-white border border-slate-100 px-3.5 py-2.5 text-xs text-slate-800 outline-none focus:border-[#A0F0F0] disabled:opacity-50"
           />
-          {pinError && <p className="text-[11px] font-bold text-rose-600">{pinError}</p>}
+          {pinError && <p className="text-[10px] text-rose-500">{pinError}</p>}
           <div className="flex gap-2">
             <button
               onClick={handleUnlockAndRetry}
               disabled={unlocking || !pinInput}
-              className="flex-1 rounded-xl bg-[#6C5DD3] py-2.5 text-xs font-bold text-white disabled:opacity-40"
+              className="flex-1 rounded-xl bg-linear-to-r from-[#FF9F1C] to-[#F37A00] text-white py-2.5 text-[10px] uppercase tracking-widest font-normal disabled:opacity-40"
             >
-              {unlocking ? 'Unlocking…' : 'Unlock & Continue'}
+              {unlocking ? 'Creating…' : 'New'}
             </button>
             <button
               onClick={() => { setNeedsPin(false); setPinInput(''); setPinError(''); }}
               disabled={unlocking}
-              className="rounded-xl bg-slate-100 px-4 py-2.5 text-xs font-bold text-slate-600 disabled:opacity-40"
+              className="rounded-xl bg-slate-50 border border-slate-100 px-4 py-2.5 text-[10px] uppercase tracking-wide text-slate-400"
             >
               Cancel
             </button>
@@ -218,13 +226,14 @@ export default function CreateVault({
       )}
 
       {status === 'success' && (
-        <div className="rounded-xl border border-emerald-100 bg-emerald-50/60 p-3">
-          <p className="text-xs font-bold text-emerald-800">Vault created and saved successfully.</p>
+        <div className="p-3 text-[11px] text-emerald-600 font-light">
+          <p>Vault create successfully.</p>
         </div>
       )}
+
       {error && (
-        <div className="rounded-xl border border-rose-100 bg-rose-50 p-3">
-          <p className="text-[11px] font-bold text-rose-600 leading-normal">{error}</p>
+        <div className="p-3 text-[11px] text-rose-500 font-light">
+          <p>{error}</p>
         </div>
       )}
     </div>
