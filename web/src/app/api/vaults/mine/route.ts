@@ -29,7 +29,7 @@ export async function GET(request: Request) {
 
     const serialize = (v: (typeof owned)[number]) => ({
       ...v,
-      onChainVaultId: v.onChainVaultId.toString(), // BigInt isn't valid JSON
+      onChainVaultId: v.onChainVaultId?.toString() ?? null,
     })
 
     return Response.json({
