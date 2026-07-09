@@ -15,6 +15,7 @@ interface VaultData {
   vaultType: string;
   ownerPubkey: string;
   createdAt: string;
+  withdrawable?: boolean;
 }
 
 interface VaultsProps {
@@ -96,7 +97,7 @@ function VaultCard({ vault, onChanged }: { vault: VaultData; onChanged: () => vo
     }
   };
 
-  const withdrawDisabled = vault.vaultType !== 'Personal' || vault.status !== 'Active';
+  const withdrawDisabled = vault.vaultType !== 'Personal' || !vault.withdrawable;
 
   return (
     <div className="p-6 rounded-3xl bg-white border border-slate-200/60 shadow-md shadow-slate-900/5 space-y-3">
