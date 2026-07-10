@@ -68,3 +68,34 @@ export async function POST(
     )
   }
 }
+
+export async function GET(
+  request: Request,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const auth = verifyAuth(request)
+    if (!auth) {
+      return Response.json({ error: "Unauthorized" }, { status: 401 })
+    }
+
+    const { id: vaultId } = await params
+    const vault = await prisma.vault.findUnique({ where: { id: vaultId } })
+    if (!vault) {
+      return Response.json({ error: "Vault not found" }, { status: 404 })
+    }
+    if (vault.ownerPubkey !== auth.pubkey) {
+      return Response.json({ error: "Only the vault owner can view invitations" }, { status: 403 })
+    }
+
+    const invitations = await prisma.invitation.findMany({
+      where: { vaultId },
+      orderBy: { createdAt: "desc" },
+    })
+
+    return Response.json(invitations)
+  } catch (error) {
+    console.error("Vault invitations fetch error:", error)
+    return Response.json({ error: "Failed to fetch invitations" }, { status: 500 })
+  }
+}

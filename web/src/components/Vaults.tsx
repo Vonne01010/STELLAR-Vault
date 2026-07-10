@@ -2,6 +2,9 @@
 import { useState, useEffect, useCallback } from 'react';
 import { authFetch, walletService } from '@/lib/wallet';
 import { depositUSDC, withdrawUSDC } from '@/lib/transfer';
+import InviteMemberModal from './vault/InviteMemberModal';
+import PendingConfirmations from './vault/PendingConfirmations';
+import MyInvitations from './MyInvitations';
 
 interface VaultData {
   id: string;
@@ -29,11 +32,12 @@ type MoneyAction = 'deposit' | 'withdraw';
 
 const SESSION_KEY_MISSING_MESSAGE = 'Your session key is unavailable. Please unlock your account again.';
 
-function VaultCard({ vault, onChanged }: { vault: VaultData; onChanged: () => void }) {
+function VaultCard({ vault, onChanged, isOwned }: { vault: VaultData; onChanged: () => void; isOwned: boolean }) {
   const progress = vault.targetAmount > 0
     ? Math.min(100, (vault.balance / vault.targetAmount) * 100)
     : 0;
 
+  const [showInvite, setShowInvite] = useState(false);
   const [action, setAction] = useState<MoneyAction | null>(null);
   const [amount, setAmount] = useState('');
   const [busy, setBusy] = useState(false);
@@ -228,6 +232,32 @@ function VaultCard({ vault, onChanged }: { vault: VaultData; onChanged: () => vo
           </div>
         </div>
       )}
+
+      {/* Collaborative-vault owner controls: invite + on-chain confirmation */}
+      {isOwned && vault.vaultType === 'Collaborative' && (
+        <div className="pt-1 space-y-2 border-t border-slate-100 mt-1">
+          {!showInvite ? (
+            <button
+              onClick={() => setShowInvite(true)}
+              className="w-full py-2 rounded-xl bg-slate-50 border border-slate-100 text-[10px] font-semibold uppercase tracking-wider text-slate-500 hover:bg-slate-100 transition-colors"
+            >
+              Invite Member
+            </button>
+          ) : (
+            <InviteMemberModal
+              vaultId={vault.id}
+              onClose={() => setShowInvite(false)}
+              onSent={() => setShowInvite(false)}
+            />
+          )}
+          <PendingConfirmations
+            vaultId={vault.id}
+            onChainVaultId={vault.onChainVaultId}
+            ownerPubkey={vault.ownerPubkey}
+            onConfirmed={onChanged}
+          />
+        </div>
+      )}
     </div>
   );
 }
@@ -261,7 +291,7 @@ export default function Vaults({ publicKey, loading: parentLoading, onWalletChan
     }
   }, [publicKey]);
 
-    const handleVaultChanged = useCallback(async () => {
+  const handleVaultChanged = useCallback(async () => {
     await refresh();
     if (onWalletChanged) {
       await onWalletChanged();
@@ -304,6 +334,8 @@ export default function Vaults({ publicKey, loading: parentLoading, onWalletChan
         </p>
       ) : (
         <>
+          <MyInvitations onResponded={refresh} />
+
           {error && (
             <div className="rounded-xl bg-rose-50 border border-rose-100 px-3 py-2.5">
               <p className="text-xs font-medium text-rose-600 leading-normal">{error}</p>
@@ -341,7 +373,14 @@ export default function Vaults({ publicKey, loading: parentLoading, onWalletChan
                   : "You haven't joined any vaults yet."}
               </p>
             ) : (
-              activeList.map((v) => <VaultCard key={v.id} vault={v} onChanged={handleVaultChanged} />)
+              activeList.map((v) => (
+                <VaultCard
+                  key={v.id}
+                  vault={v}
+                  onChanged={handleVaultChanged}
+                  isOwned={subTab === 'owned'}
+                />
+              ))
             )}
           </div>
         </>
