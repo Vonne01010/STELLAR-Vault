@@ -394,7 +394,7 @@ export default function Vaults({
         </p>
       ) : (
         <>
-          <MyInvitations onResponded={refresh} />
+          <MyInvitations onResponded={refresh} focusVaultId={focusVaultId} onFocusHandled={onFocusHandled} />
 
           {error && (
             <div className="rounded-xl bg-rose-50 border border-rose-100 px-3 py-2.5">
