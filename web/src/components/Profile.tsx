@@ -1,7 +1,8 @@
 'use client';
 
-import React from 'react';
+import React, { useState } from 'react';
 import Image from 'next/image';
+import Level2Verification from './verification/Level2Verification';
 
 interface ProfileProps {
   publicKey: string | null;
@@ -25,6 +26,7 @@ interface ProfileProps {
   points?: number;
   avatarSrc?: string;
   phoneVerified?: boolean;
+  phoneNumber?: string;
   identityVerified?: boolean;
   communityTrustUnlocked?: boolean;
   onVerifyIdentity?: () => void;
@@ -106,6 +108,7 @@ export default function Profile({
   points = 2450,
   avatarSrc = '/stellamascot.png',
   phoneVerified = true,
+  phoneNumber = '+63 917 •• •• 213',
   identityVerified = false,
   communityTrustUnlocked = false,
   onVerifyIdentity,
@@ -114,6 +117,16 @@ export default function Profile({
   onOpenSupport,
 }: ProfileProps) {
   const { network } = wallet || {};
+
+  // Controls the Level 2 verification modal. Kept local to Profile since the
+  // gate + wizard is self-contained; onVerifyIdentity is still fired so a
+  // parent (e.g. to refetch user/points) can react if it needs to.
+  const [showLevel2, setShowLevel2] = useState(false);
+
+  const handleLevelUpClick = () => {
+    setShowLevel2(true);
+    onVerifyIdentity?.();
+  };
 
   return (
     <div className="px-5 py-4 space-y-6 animate-fade-in">
@@ -194,7 +207,7 @@ export default function Profile({
           <p className="text-xs font-normal text-slate-500">Required for cross-chain transactions.</p>
           {!identityVerified && (
             <button
-              onClick={onVerifyIdentity}
+              onClick={handleLevelUpClick}
               className="w-full mt-1 py-2.5 rounded-xl bg-[#FF5E00] text-white text-xs font-semibold uppercase tracking-wider hover:bg-[#e65300] active:scale-95 transition-all cursor-pointer"
             >
               Level Up
@@ -208,7 +221,7 @@ export default function Profile({
             <span className="text-[10px] font-medium uppercase tracking-wider text-slate-400">Level 3</span>
             {!communityTrustUnlocked && <LockIcon className="text-slate-300" />}
           </div>
-          <h4 className="text-sm font-semibold ${communityTrustUnlocked ? 'text-slate-800' : 'text-slate-400'}">Community Trust</h4>
+          <h4 className={`text-sm font-semibold ${communityTrustUnlocked ? 'text-slate-800' : 'text-slate-400'}`}>Community Trust</h4>
           <p className="text-xs font-normal text-slate-400">The ultimate badge of a trusted STELLA Vault node.</p>
           {!communityTrustUnlocked && (
             <button
@@ -252,6 +265,28 @@ export default function Profile({
           Log Out
         </button>
       </div>
+
+      {/* Level 2 verification modal */}
+      {showLevel2 && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-sm px-4"
+          onClick={(e) => {
+            // close only when clicking the backdrop, not the modal card itself
+            if (e.target === e.currentTarget) setShowLevel2(false);
+          }}
+        >
+          <Level2Verification
+            currentPoints={points}
+            verifiedPhone={phoneNumber}
+            onClose={() => setShowLevel2(false)}
+            onComplete={() => {
+              // Close on success; parent should refetch identityVerified via onVerifyIdentity
+              // or its own data source once the backend call in StepSummary confirms.
+              setShowLevel2(false);
+            }}
+          />
+        </div>
+      )}
     </div>
   );
 }
