@@ -11,7 +11,7 @@ param([string]$Identity = "workshop")
 $ErrorActionPreference = "Stop"
 $Network = "testnet"
 $Root = (Resolve-Path (Join-Path $PSScriptRoot "..")).Path
-$Wasm = "target\wasm32v1-none\release\savings_goal.wasm"
+$Wasm = "target\wasm32v1-none\release\stella_vault.wasm"
 $EnvFile = Join-Path $Root "web\.env.local"
 
 Set-Location $Root
