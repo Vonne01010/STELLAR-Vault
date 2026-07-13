@@ -16,6 +16,12 @@ export async function POST(request: Request) {
       return Response.json({ error: "pubkey is required" }, { status: 400 })
     }
 
+    const existing = await prisma.user.findUnique({ where: { pubkey: body.pubkey } })
+
+    if (existing?.deletedAt) {
+      return Response.json({ error: "This account has been deleted" }, { status: 410 })
+    }
+
     const user = await prisma.user.upsert({
       where: { pubkey: body.pubkey },
       update: {
