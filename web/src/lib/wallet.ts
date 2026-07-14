@@ -2,7 +2,7 @@
 
 import { generateKeypair, keypairFromSecret, fundTestnetAccount, NETWORK_PASSPHRASE } from '@/lib/stellar';
 import { encryptSecretKey, decryptSecretKey } from '@/lib/auth/encryption';
-import { saveAccount, loadAccount } from '@/lib/auth/storage';
+import { saveAccount, loadAccount, clearAccount } from '@/lib/auth/storage';
 import { TransactionBuilder } from '@stellar/stellar-sdk';
 
 export type WalletStatus =
@@ -458,6 +458,7 @@ async function disconnectWallet(): Promise<void> {
   setSnapshot({ status: 'disconnecting', error: null });
   currentSecretKey = null;
   clearStoredSnapshot();
+  clearAccount();
   currentSnapshot = { ...defaultSnapshot };
   emit();
 }

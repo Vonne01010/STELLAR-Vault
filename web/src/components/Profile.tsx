@@ -13,7 +13,7 @@ interface ProfileProps {
   onCopyAddress: () => void;
   loading: boolean;
   onRefresh: () => void;
-  onLogout: () => void;
+  onLogout: () => void | Promise<void>;
   wallet: {
     status?: string;
     network?: string;
@@ -139,7 +139,7 @@ export default function Profile({
         throw new Error(data?.error ?? 'Failed to delete account');
       }
       // Account is soft-deleted server-side — clear local session same as a normal logout.
-      onLogout();
+      await onLogout();
     } catch (e: unknown) {
       setDeleteError(e instanceof Error ? e.message : 'Failed to delete account');
       setDeleting(false);
