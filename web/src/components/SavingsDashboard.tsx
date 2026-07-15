@@ -1,19 +1,16 @@
 'use client';
 
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { fetchBalances, type Balances } from '@/lib/balances';
 import { walletService, authFetch } from '@/lib/wallet';
 import {
   contractConfigured,
   readSavingsState,
   readVaultBalanceSummary,
-  resolveVaultId,
   type SavingsState,
   type VaultBalanceSummary,
 } from '@/lib/contract';
 import {
-  depositUSDC,
-  withdrawUSDC,
   transferUSDC,
   getTransferState,
   subscribeToTransferState,
@@ -30,18 +27,16 @@ import History from './History';
 import Profile from './Profile';
 import Vaults from './Vaults';
 import CreateVault from './vault/CreateVault';
-import QRCodeDisplay from './QRCodeDisplay';
-import QRScanner from './QRScanner';
 import NotificationBell from './NotificationBell';
 import { loadProfile, loadTrustScore, type UserProfile, type TrustScore } from '@/lib/auth/verification';
+import { EyeIcon, SparkleStar, NavIcon } from '@/app/icons';
+import PinUnlockPanel from './PinUnlockPanel';
+import DepositReceivePanel from './DepositReceivePanel';
+import WithdrawPanel from './WithdrawPanel';
+import SendPanel from './SendPanel';
+import type { Panel, Tab } from '@/lib/dashboardTypes';
 
 const STELLAR_ADDRESS_RE = /^G[A-Z2-7]{55}$/;
-
-/** Builds a `stellar:` payment URI so scanning apps can prefill destination + amount. */
-function buildPaymentUri(address: string, amount?: string): string {
-  if (!amount || Number(amount) <= 0) return address;
-  return `stellar:${address}?amount=${encodeURIComponent(amount)}`;
-}
 
 /** Parses a scanned QR payload into an address + optional amount. Accepts a bare
  *  Stellar public key, a `stellar:` URI, or a `web+stellar:pay` URI. */
@@ -84,63 +79,6 @@ interface DashboardProps {
   wallet: WalletContextProps;
   onLogout: () => void | Promise<void>;
   headerActions?: React.ReactNode;
-}
-
-type Panel = 'deposit' | 'withdraw' | 'receive' | 'send' | 'create' | null;
-type Tab = 'home' | 'vaults' | 'activity' | 'profile';
-
-/* ---------- SVG Icon Toolkit ---------- */
-
-function EyeIcon({ className = '' }) {
-  return (
-    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
-      <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
-      <circle cx="12" cy="12" r="3"></circle>
-    </svg>
-  );
-}
-
-function SparkleStar({ className = '' }) {
-  return (
-    <svg viewBox="0 0 24 24" fill="currentColor" className={className}>
-      <path d="M12 2c0 4.2 1.2 7 3.2 9S22 12.8 22 12s-4.8-.8-6.8-2.8S12 2 12 2z" />
-      <path d="M12 22c0-4.2-1.2-7-3.2-9S2 11.2 2 12s4.8.8 6.8 2.8S12 22 12 22z" />
-    </svg>
-  );
-}
-
-function NavIcon({ type, active }: { type: Tab; active: boolean }) {
-  const color = active ? '#1A1A1A' : '#A4B0BE';
-  if (type === 'home') {
-    return (
-      <svg className="w-5 h-5" fill="none" stroke={color} strokeWidth="2" viewBox="0 0 24 24">
-        <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
-        <polyline points="9 22 9 12 15 12 15 22"></polyline>
-      </svg>
-    );
-  }
-  if (type === 'activity') {
-    return (
-      <svg className="w-5 h-5" fill="none" stroke={color} strokeWidth="2" viewBox="0 0 24 24">
-        <circle cx="12" cy="12" r="10"></circle>
-        <polyline points="12 6 12 12 16 14"></polyline>
-      </svg>
-    );
-  }
-  if (type === 'vaults') {
-    return (
-      <svg className="w-5 h-5" fill="none" stroke={color} strokeWidth="2" viewBox="0 0 24 24">
-        <rect x="3" y="7" width="18" height="13" rx="2"></rect>
-        <path d="M8 7V5a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
-      </svg>
-    );
-  }
-  return (
-    <svg className="w-5 h-5" fill="none" stroke={color} strokeWidth="2" viewBox="0 0 24 24">
-      <circle cx="12" cy="7" r="4"></circle>
-      <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
-    </svg>
-  );
 }
 
 const SESSION_KEY_MISSING_MESSAGE = 'Your session key is unavailable. Please unlock your account again.';
@@ -476,6 +414,20 @@ export default function SavingsDashboard({ publicKey, wallet, onLogout, headerAc
     }
   };
 
+  const handleVoidPendingApproval = async () => {
+    if (!pendingApproval) return;
+    setBusy(true);
+    try {
+      await removePendingTransferApproval(pendingApproval.id);
+      setError(''); setMsg('');
+      await refreshPendingApproval();
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : 'Failed to cancel transfer request');
+    } finally {
+      setBusy(false);
+    }
+  };
+
   if (!configured) {
     return (
       <div className="p-6 max-w-md mx-auto bg-white border border-slate-100 rounded-2xl text-slate-800 flex items-center gap-3">
@@ -572,344 +524,70 @@ return (
                 )}
 
                 {needsPin && (
-                  <div className="rounded-2xl bg-white border border-slate-100 p-5 text-[#1A1A1A] space-y-3">
-                    <p className="text-[10px] uppercase tracking-wider text-slate-400 font-light">
-                      Enter PIN
-                    </p>
-                    <input
-                      type="password"
-                      inputMode="numeric"
-                      value={pinInput}
-                      onChange={(e) => setPinInput(e.target.value)}
-                      placeholder="••••"
-                      disabled={unlocking}
-                      className="w-full rounded-xl bg-slate-50 border border-slate-100 px-3.5 py-2.5 text-xs outline-none focus:border-[#A0F0F0] disabled:opacity-50"
-                    />
-                    {pinError && <p className="text-[10px] text-rose-500">{pinError}</p>}
-                    <div className="flex gap-2">
-                      <button
-                        onClick={handleUnlockAndRetry}
-                        disabled={unlocking || !pinInput}
-                        className="flex-1 rounded-xl bg-linear-to-r from-[#FF9F1C] to-[#F37A00] text-white py-2.5 text-[10px] uppercase tracking-widest font-normal disabled:opacity-40"
-                      >
-                        {unlocking ? 'Unlocking…' : 'Unlock'}
-                      </button>
-                      <button
-                        onClick={() => { setNeedsPin(false); setPinInput(''); setPinError(''); setPendingRetry(null); }}
-                        disabled={unlocking}
-                        className="rounded-xl bg-slate-50 border border-slate-100 px-4 py-2.5 text-[10px] uppercase tracking-wider text-slate-400"
-                      >
-                        Cancel
-                      </button>
-                    </div>
-                  </div>
+                  <PinUnlockPanel
+                    pinInput={pinInput}
+                    onPinInputChange={setPinInput}
+                    pinError={pinError}
+                    unlocking={unlocking}
+                    onUnlock={handleUnlockAndRetry}
+                    onCancel={() => { setNeedsPin(false); setPinInput(''); setPinError(''); setPendingRetry(null); }}
+                  />
                 )}
 
                 {/* ---------- DEPOSIT & RECEIVE COMBINED CONTAINER ---------- */}
-                {(panel === 'deposit' || panel === 'receive') && (
-                  <div className="rounded-2xl bg-white border border-slate-100 p-5 text-[#1A1A1A] space-y-4 animate-fadeIn">
-                    <div className="grid grid-cols-2 p-0.5 bg-slate-50 border border-slate-100 rounded-xl">
-                      <button 
-                        type="button"
-                        onClick={() => setPanel('deposit')}
-                        className={`py-1.5 text-[10px] uppercase tracking-wider rounded-lg transition-all ${panel === 'deposit' ? 'bg-[#E0FBFB] text-slate-800' : 'text-slate-400 font-light'}`}
-                      >
-                        Deposit
-                      </button>
-                      <button 
-                        type="button"
-                        onClick={() => { setPanel('receive'); setReceiveMode('address'); }}
-                        className={`py-1.5 text-[10px] uppercase tracking-wider rounded-lg transition-all ${panel === 'receive' ? 'bg-[#E0FBFB] text-slate-800' : 'text-slate-400 font-light'}`}
-                      >
-                        Receive
-                      </button>
-                    </div>
-
-                    {panel === 'deposit' && (
-                      <div className="space-y-3 animate-fadeIn">
-                        <div className="space-y-1">
-                          <label className="block text-[10px] uppercase tracking-wider text-slate-400 font-light">Amount</label>
-                          <div className="relative flex items-center">
-                            <input
-                              type="number" 
-                              value={depositAmount} 
-                              onChange={(e) => setDepositAmount(e.target.value)} 
-                              placeholder="0.00" 
-                              disabled={busy}
-                              className="w-full rounded-xl bg-slate-50 border border-slate-100 pl-4 pr-16 py-2.5 text-xs text-slate-800 outline-none focus:border-[#A0F0F0] disabled:opacity-50 transition-colors"
-                            />
-                            <span className="absolute right-4 text-[10px] text-slate-400">USDC</span>
-                          </div>
-                        </div>
-
-                        <div className="bg-slate-50/50 px-3 py-2 flex justify-between items-center text-[10px]">
-                          <span className="uppercase text-slate-400 font-light tracking-wider">Value</span>
-                          <span className="text-slate-500">
-                            ₱{((Number(depositAmount) || 0) * phpRate).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                          </span>
-                        </div>
-
-                        <button 
-                          onClick={handleDeposit} 
-                          disabled={busy || loading || !depositAmount || Number(depositAmount) <= 0} 
-                          className="w-full py-3 rounded-xl bg-linear-to-r from-[#FF9F1C] to-[#F37A00] text-white text-[10px] uppercase tracking-widest hover:opacity-95 transition-opacity disabled:opacity-40 flex items-center justify-center gap-2"
-                        >
-                          {busy && (
-                            <svg className="animate-spin h-3 w-3 text-white" fill="none" viewBox="0 0 24 24">
-                              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-                            </svg>
-                          )}
-                          <span>{busy ? 'Processing...' : 'Deposit'}</span>
-                        </button>
-                      </div>
-                    )}
-
-                    {panel === 'receive' && publicKey && (
-                      <div className="space-y-3 animate-fadeIn">
-                        <div className="grid grid-cols-2 p-0.5 bg-slate-50 border border-slate-100 rounded-lg">
-                          <button 
-                            onClick={() => setReceiveMode('address')}
-                            className={`py-1 text-[9px] uppercase tracking-wider rounded-md transition-all ${receiveMode === 'address' ? 'bg-[#E0FBFB] text-slate-800' : 'text-slate-400 font-light'}`}
-                          >
-                            My Address
-                          </button>
-                          <button 
-                            onClick={() => setReceiveMode('qr')}
-                            className={`py-1 text-[9px] uppercase tracking-wider rounded-md transition-all ${receiveMode === 'qr' ? 'bg-[#E0FBFB] text-slate-800' : 'text-slate-400 font-light'}`}
-                          >
-                            QR Code
-                          </button>
-                        </div>
-
-                        {receiveMode === 'address' ? (
-                          <div className="space-y-2 animate-fadeIn">
-                            <p className="break-all rounded-xl border border-slate-100 bg-slate-50 p-3 text-[11px] text-slate-500 leading-relaxed font-mono">{publicKey}</p>
-                            <button 
-                              onClick={handleCopyAddress} 
-                              className="w-full py-2.5 rounded-xl bg-[#E0FBFB] text-slate-800 text-[10px] uppercase tracking-wider font-light"
-                            >
-                              {copied ? 'Copied Securely' : 'Copy Key'}
-                            </button>
-                          </div>
-                        ) : (
-                          <div className="flex flex-col items-center justify-center py-2 space-y-3 animate-fadeIn">
-                            <QRCodeDisplay value={buildPaymentUri(publicKey, receiveRequestAmount)} size={176} />
-
-                            <div className="w-full space-y-1">
-                              <label className="block text-[10px] uppercase tracking-wider text-slate-400 font-light">
-                                Request Amount (optional)
-                              </label>
-                              <div className="relative flex items-center">
-                                <input
-                                  type="number"
-                                  value={receiveRequestAmount}
-                                  onChange={(e) => setReceiveRequestAmount(e.target.value)}
-                                  placeholder="0.00"
-                                  className="w-full rounded-xl bg-slate-50 border border-slate-100 pl-4 pr-14 py-2.5 text-xs text-slate-800 outline-none focus:border-[#A0F0F0] transition-colors"
-                                />
-                                <span className="absolute right-4 text-[10px] text-slate-400">USDC</span>
-                              </div>
-                            </div>
-
-                            <span className="text-[9px] uppercase tracking-widest text-slate-400 font-light text-center">
-                              {receiveRequestAmount && Number(receiveRequestAmount) > 0
-                                ? `Requesting ${Number(receiveRequestAmount).toLocaleString(undefined, { minimumFractionDigits: 2 })} USDC`
-                                : 'Scan to send to this wallet'}
-                            </span>
-                          </div>
-                        )}
-                      </div>
-                    )}
-                  </div>
+                {(panel === 'deposit' || panel === 'receive') && publicKey && (
+                  <DepositReceivePanel
+                    panel={panel}
+                    setPanel={setPanel}
+                    publicKey={publicKey}
+                    phpRate={phpRate}
+                    busy={busy}
+                    loading={loading}
+                    depositAmount={depositAmount}
+                    onDepositAmountChange={setDepositAmount}
+                    onDeposit={handleDeposit}
+                    receiveMode={receiveMode}
+                    onReceiveModeChange={setReceiveMode}
+                    copied={copied}
+                    onCopyAddress={handleCopyAddress}
+                    receiveRequestAmount={receiveRequestAmount}
+                    onReceiveRequestAmountChange={setReceiveRequestAmount}
+                  />
                 )}
 
                 {/* ---------- WITHDRAW CONTAINER ---------- */}
                 {panel === 'withdraw' && (
-                  <div className="rounded-2xl bg-white border border-slate-100 p-5 text-[#1A1A1A] space-y-4 animate-fadeIn">
-                    <div className="space-y-1">
-                      <div className="flex justify-between items-baseline">
-                        <label className="block text-[10px] uppercase tracking-wider text-slate-400 font-light">Withdraw</label>
-                        <span className="text-[9px] text-slate-400 font-light">Balance: {usdcBalance.toFixed(2)}</span>
-                      </div>
-                      <div className="relative flex items-center">
-                        <input
-                          type="number" 
-                          value={withdrawAmount} 
-                          onChange={(e) => setWithdrawAmount(e.target.value)} 
-                          placeholder="0.00" 
-                          disabled={busy}
-                          className="w-full rounded-xl bg-slate-50 border border-slate-100 pl-4 pr-20 py-2.5 text-xs text-slate-800 outline-none focus:border-[#A0F0F0] transition-colors"
-                        />
-                        <div className="absolute right-2 flex items-center gap-1">
-                          <span className="text-[10px] text-slate-400 mr-1">USDC</span>
-                          <button 
-                            onClick={() => setWithdrawAmount(Math.floor(usdcBalance).toString())}
-                            className="px-1.5 py-0.5 text-[9px] text-slate-600 bg-[#E0FBFB] rounded uppercase font-light"
-                          >
-                            Max
-                          </button>
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="bg-slate-50/50 px-3 py-2 flex justify-between items-center text-[10px]">
-                      <span className="uppercase text-slate-400 font-light tracking-wider">Fiat Value</span>
-                      <span className="text-slate-500">
-                        ₱{((Number(withdrawAmount) || 0) * phpRate).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                      </span>
-                    </div>
-
-                    <button disabled className="w-full py-3 rounded-xl bg-slate-50 text-slate-300 text-[10px] uppercase tracking-widest cursor-not-allowed font-light">
-                      Feature Pending
-                    </button>
-                  </div>
+                  <WithdrawPanel
+                    withdrawAmount={withdrawAmount}
+                    onWithdrawAmountChange={setWithdrawAmount}
+                    busy={busy}
+                    usdcBalance={usdcBalance}
+                    phpRate={phpRate}
+                  />
                 )}
 
                 {/* ---------- SEND CONTAINER ---------- */}
                 {panel === 'send' && (
-                  <div className="rounded-2xl bg-white border border-slate-100 p-5 text-[#1A1A1A] space-y-4 animate-fadeIn">
-                    {!publicKey ? (
-                      <p className="p-4 bg-slate-50 text-[10px] text-slate-400 font-light text-center">Verify parameters to initialize transfer.</p>
-                    ) : (
-                      <div className="space-y-3">
-                        <div className="grid grid-cols-2 p-0.5 bg-slate-50 border border-slate-100 rounded-xl">
-                          <button 
-                            type="button"
-                            onClick={() => setSendMode('amount')}
-                            className={`py-1.5 text-[10px] uppercase tracking-wider rounded-lg transition-all ${sendMode === 'amount' ? 'bg-[#E0FBFB] text-slate-800' : 'text-slate-400 font-light'}`}
-                          >
-                            Enter
-                          </button>
-                          <button 
-                            type="button"
-                            onClick={() => setSendMode('qr')}
-                            className={`py-1.5 text-[10px] uppercase tracking-wider rounded-lg transition-all ${sendMode === 'qr' ? 'bg-[#E0FBFB] text-slate-800' : 'text-slate-400 font-light'}`}
-                          >
-                            Scan
-                          </button>
-                        </div>
-
-                        {sendMode === 'amount' ? (
-                          <>
-                            {!pendingApproval && (
-                              <div className="space-y-3 animate-fadeIn">
-                                <div className="space-y-1">
-                                  <label className="block text-[10px] uppercase tracking-wider text-slate-400 font-light">Address</label>
-                                  <input
-                                    type="text" 
-                                    value={recipient} 
-                                    onChange={(e) => setRecipient(e.target.value)} 
-                                    placeholder="Stellar Public Address (G...)" 
-                                    disabled={busy}
-                                    className="w-full rounded-xl bg-slate-50 border border-slate-100 px-3 py-2 text-[11px] font-mono text-slate-600 outline-none focus:border-[#A0F0F0] transition-colors"
-                                  />
-                                </div>
-                                <div className="space-y-1">
-                                  <label className="block text-[10px] uppercase tracking-wider text-slate-400 font-light">Amount</label>
-                                  <div className="relative flex items-center">
-                                    <input
-                                      type="number" 
-                                      value={transferAmount} 
-                                      onChange={(e) => setTransferAmount(e.target.value)} 
-                                      placeholder="0.00" 
-                                      disabled={busy}
-                                      className="w-full rounded-xl bg-slate-50 border border-slate-100 pl-4 pr-14 py-2.5 text-xs text-slate-800 outline-none focus:border-[#A0F0F0] transition-colors"
-                                    />
-                                    <span className="absolute right-4 text-[10px] text-slate-400">USDC</span>
-                                  </div>
-                                </div>
-
-                                <button 
-                                  type="button"
-                                  onClick={handleTransferRequest}
-                                  disabled={busy || !recipient || !transferAmount || Number(transferAmount) <= 0}
-                                  className="w-full py-3 rounded-xl bg-linear-to-r from-[#FF9F1C] to-[#F37A00] text-white text-[10px] uppercase tracking-widest hover:opacity-95 transition-opacity disabled:opacity-40"
-                                >
-                                  {busy ? 'Sending Request…' : 'Request'}
-                                </button>
-                              </div>
-                            )}
-
-                            {pendingApproval && (
-                              <div className="rounded-xl border border-slate-100 bg-slate-50/50 p-4 space-y-3 text-[11px] animate-fadeIn">
-                                <div className="flex justify-between items-center border-b border-slate-100 pb-2">
-                                  <span className="text-[10px] uppercase text-slate-400 font-light tracking-wider">Pending Tx</span>
-                                  <span className="font-normal text-slate-800">{pendingApproval.amount} USDC</span>
-                                </div>
-                                <div className="space-y-0.5 text-slate-400 font-light text-[10px]">
-                                  <p className="truncate"><span className="uppercase tracking-wide">From:</span> {pendingApproval.sender}</p>
-                                  <p className="truncate"><span className="uppercase tracking-wide">To:</span> {pendingApproval.recipient}</p>
-                                </div>
-
-                                <div className="grid grid-cols-2 gap-2 text-[9px] tracking-wide text-center uppercase font-light">
-                                  <div className={`p-1.5 rounded-lg border ${pendingApproval.senderAuthorized ? 'bg-[#E0FBFB] border-[#A0F0F0] text-slate-700' : 'bg-slate-50 border-slate-100 text-slate-400'}`}>
-                                    Sender {pendingApproval.senderAuthorized ? '✓' : '○'}
-                                  </div>
-                                  <div className={`p-1.5 rounded-lg border ${pendingApproval.receiverAuthorized ? 'bg-[#E0FBFB] border-[#A0F0F0] text-slate-700' : 'bg-slate-50 border-slate-100 text-slate-400'}`}>
-                                    Receiver {pendingApproval.receiverAuthorized ? '✓' : '○'}
-                                  </div>
-                                </div>
-
-                                <div className="flex gap-2 pt-1">
-                                  {pendingApproval.sender === publicKey && !pendingApproval.senderAuthorized && (
-                                    <button type="button" onClick={handleApproveAsSender} disabled={busy} className="flex-1 py-2.5 rounded-xl bg-linear-to-r from-[#FF9F1C] to-[#F37A00] text-white text-[10px] uppercase tracking-wider disabled:opacity-50">
-                                      Sign Sender
-                                    </button>
-                                  )}
-                                  {pendingApproval.recipient === publicKey && !pendingApproval.receiverAuthorized && (
-                                    <button type="button" onClick={handleApproveAsReceiver} disabled={busy} className="flex-1 py-2.5 rounded-xl bg-linear-to-r from-[#FF9F1C] to-[#F37A00] text-white text-[10px] uppercase tracking-wider disabled:opacity-50">
-                                      Sign Receiver
-                                    </button>
-                                  )}
-                                  {pendingApproval.sender === publicKey && pendingApproval.senderAuthorized && pendingApproval.receiverAuthorized && (
-                                    <button type="button" onClick={handleSubmitApprovedTransfer} disabled={busy} className="flex-1 py-2.5 rounded-xl bg-linear-to-r from-[#FF9F1C] to-[#F37A00] text-white text-[10px] uppercase tracking-widest font-normal disabled:opacity-50">
-                                      {busy ? 'Processing…' : 'Submit Payload'}
-                                    </button>
-                                  )}
-                                  <button 
-                                    type="button" 
-                                    disabled={busy}
-                                    onClick={async () => {
-                                      setBusy(true);
-                                      try {
-                                        await removePendingTransferApproval(pendingApproval.id);
-                                        setError(''); setMsg('');
-                                        await refreshPendingApproval();
-                                      } catch (e: unknown) {
-                                        setError(e instanceof Error ? e.message : 'Failed to cancel transfer request');
-                                      } finally {
-                                        setBusy(false);
-                                      }
-                                    }}
-                                    className="px-3 py-2.5 rounded-xl bg-slate-100 text-slate-400 text-[10px] uppercase tracking-wide disabled:opacity-50"
-                                  >
-                                    Void
-                                  </button>
-                                </div>
-                              </div>
-                            )}
-                          </>
-                        ) : (
-                          <div className="flex flex-col items-center justify-center py-4 bg-slate-50 rounded-xl border border-dashed border-slate-200 space-y-3 animate-fadeIn">
-                            <QRScanner
-                              active={panel === 'send' && sendMode === 'qr' && !pendingApproval && !needsPin}
-                              onScan={handleQrScanResult}
-                            />
-                            {scannedOk && (
-                              <p className="flex items-center gap-1 text-[10px] text-emerald-600 font-light">
-                                <SparkleStar className="w-3 h-3" />
-                                Address captured
-                              </p>
-                            )}
-                            {scanError && (
-                              <p className="text-[10px] text-rose-500 font-light text-center px-4">{scanError}</p>
-                            )}
-                          </div>
-                        )}
-                      </div>
-                    )}
-                  </div>
+                  <SendPanel
+                    publicKey={publicKey}
+                    sendMode={sendMode}
+                    onSendModeChange={setSendMode}
+                    pendingApproval={pendingApproval}
+                    recipient={recipient}
+                    onRecipientChange={setRecipient}
+                    transferAmount={transferAmount}
+                    onTransferAmountChange={setTransferAmount}
+                    busy={busy}
+                    onTransferRequest={handleTransferRequest}
+                    onApproveAsSender={handleApproveAsSender}
+                    onApproveAsReceiver={handleApproveAsReceiver}
+                    onSubmitApprovedTransfer={handleSubmitApprovedTransfer}
+                    onVoidPendingApproval={handleVoidPendingApproval}
+                    needsPin={needsPin}
+                    scannedOk={scannedOk}
+                    scanError={scanError}
+                    onQrScanResult={handleQrScanResult}
+                  />
                 )}
 
                 {/* ---------- CREATE VAULT CONTAINER ---------- */}
