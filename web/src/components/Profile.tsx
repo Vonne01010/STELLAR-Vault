@@ -3,6 +3,7 @@
 import React, { useState } from 'react';
 import Image from 'next/image';
 import Level2Verification from './verification/Level2Verification';
+import { CheckBadgeIcon, LockIcon, EditIcon, SettingsIcon } from '@/app/icons';
 
 interface ProfileProps {
   publicKey: string | null;
@@ -30,62 +31,6 @@ interface ProfileProps {
   communityTrustUnlocked?: boolean;
   onVerifyIdentity?: () => void;
   onOpenSettings?: () => void;
-  onOpenSecurity?: () => void;
-  onOpenSupport?: () => void;
-}
-
-function CheckBadgeIcon({ className = '' }) {
-  return (
-    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
-      <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
-      <path d="M9 12l2 2 4-4"></path>
-    </svg>
-  );
-}
-
-function LockIcon({ className = '' }) {
-  return (
-    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
-      <rect x="5" y="11" width="14" height="9" rx="2"></rect>
-      <path d="M8 11V7a4 4 0 0 1 8 0v4"></path>
-    </svg>
-  );
-}
-
-function EditIcon({ className = '' }) {
-  return (
-    <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
-      <path d="M12 20h9"></path>
-      <path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"></path>
-    </svg>
-  );
-}
-
-function SettingsIcon({ className = '' }) {
-  return (
-    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
-      <circle cx="12" cy="12" r="3"></circle>
-      <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
-    </svg>
-  );
-}
-
-function SecurityIcon({ className = '' }) {
-  return (
-    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
-      <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
-    </svg>
-  );
-}
-
-function SupportIcon({ className = '' }) {
-  return (
-    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
-      <circle cx="12" cy="12" r="10"></circle>
-      <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path>
-      <line x1="12" y1="17" x2="12.01" y2="17"></line>
-    </svg>
-  );
 }
 
 export default function Profile({
@@ -101,8 +46,6 @@ export default function Profile({
   communityTrustUnlocked = false,
   onVerifyIdentity,
   onOpenSettings,
-  onOpenSecurity,
-  onOpenSupport,
 }: ProfileProps) {
   const { network } = wallet || {};
 
@@ -120,10 +63,15 @@ export default function Profile({
     <div className="px-5 py-4 space-y-7 animate-fade-in">
       {/* Top bar */}
       <div className="flex justify-between items-center px-1">
-        <h3 className="text-xl font-semibold text-[#FF5E00] tracking-tight">STELLA Vault</h3>
-        <span className="px-3 py-1 text-[11px] font-medium bg-[#9AFAFA] text-[#0F4F53] rounded-full uppercase tracking-wider">
-          {network || 'Testnet'}
-        </span>
+        <h3 className="text-xl font-semibold text-[#FF5E00] tracking-tight">Profile</h3>
+        <button
+          type="button"
+          onClick={onOpenSettings}
+          aria-label="Open settings"
+          className="p-2 -mr-2 rounded-full text-slate-400 hover:text-slate-600 hover:bg-slate-50 transition-colors cursor-pointer"
+        >
+          <SettingsIcon />
+        </button>
       </div>
 
       {/* Avatar + identity */}
@@ -165,9 +113,7 @@ export default function Profile({
         </div>
       </div>
 
-      {/* Progressive identity — one card, one row per level, only the
-          actionable level expands with a CTA. Collapsing levels 1 and 3 to
-          single rows keeps the whole ladder scannable at a glance. */}
+      {/* Progressive identity */}
       <div className="space-y-2.5">
         <div className="px-1">
           <h3 className="text-sm font-semibold text-slate-800 tracking-tight">Progressive Identity</h3>
@@ -218,38 +164,11 @@ export default function Profile({
         </div>
       </div>
 
-      {/* Quick actions — Account (logout/delete) now lives inside Settings,
-          so this row only carries top-level destinations. */}
-      <div className="grid grid-cols-3 gap-3">
-        <button
-          onClick={onOpenSettings}
-          className="flex flex-col items-center gap-1.5 justify-center bg-white border border-slate-200/60 rounded-2xl py-3.5 text-[11px] font-medium text-slate-600 hover:bg-slate-50 active:scale-95 transition-all cursor-pointer"
-        >
-          <SettingsIcon className="text-[#FF5E00]" />
-          Settings
-        </button>
-        <button
-          onClick={onOpenSecurity}
-          className="flex flex-col items-center gap-1.5 justify-center bg-white border border-slate-200/60 rounded-2xl py-3.5 text-[11px] font-medium text-slate-600 hover:bg-slate-50 active:scale-95 transition-all cursor-pointer"
-        >
-          <SecurityIcon className="text-[#3B82F6]" />
-          Security
-        </button>
-        <button
-          onClick={onOpenSupport}
-          className="flex flex-col items-center gap-1.5 justify-center bg-white border border-slate-200/60 rounded-2xl py-3.5 text-[11px] font-medium text-slate-600 hover:bg-slate-50 active:scale-95 transition-all cursor-pointer"
-        >
-          <SupportIcon className="text-[#FF5E00]" />
-          Support
-        </button>
-      </div>
-
       {/* Level 2 verification modal */}
       {showLevel2 && (
         <div
           className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-sm px-4"
           onClick={(e) => {
-            // close only when clicking the backdrop, not the modal card itself
             if (e.target === e.currentTarget) setShowLevel2(false);
           }}
         >
@@ -258,8 +177,6 @@ export default function Profile({
             verifiedPhone={phoneNumber}
             onClose={() => setShowLevel2(false)}
             onComplete={() => {
-              // Close on success; parent should refetch identityVerified via onVerifyIdentity
-              // or its own data source once the backend call in StepSummary confirms.
               setShowLevel2(false);
             }}
           />

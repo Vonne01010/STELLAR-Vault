@@ -635,8 +635,6 @@ return (
               loading={loading}
               onRefresh={refresh}
               onOpenSettings={() => router.push('/settings')}
-              onOpenSecurity={() => router.push('/settings/security')}
-              onOpenSupport={() => router.push('/settings/support')}
             />
           </div>
         )}
