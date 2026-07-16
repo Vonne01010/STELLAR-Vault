@@ -11,11 +11,6 @@ export async function GET() {
 }
 
 export async function POST(request: Request) {
-  const auth = await verifyAuth(request)
-  if (!auth) {
-    return Response.json({ error: "Unauthorized" }, { status: 401 })
-  }
-
   try {
     const body = await request.json()
 
@@ -23,17 +18,22 @@ export async function POST(request: Request) {
       return Response.json({ error: "pubkey is required" }, { status: 400 })
     }
 
-    // A caller can only ever create/update their own record — without this,
-    // any authenticated user could pass someone else's pubkey and overwrite
-    // that person's username/avatar.
-    if (body.pubkey !== auth.pubkey) {
-      return Response.json({ error: "Cannot modify another user's profile" }, { status: 403 })
-    }
-
     const existing = await prisma.user.findUnique({ where: { pubkey: body.pubkey } })
 
     if (existing?.deletedAt) {
       return Response.json({ error: "This account has been deleted" }, { status: 410 })
+    }
+
+    // Only require auth for touching an EXISTING record — first-time
+    // creation happens during onboarding, before the caller necessarily
+    // has an authenticated session yet, so gating that too broke
+    // registration entirely. Once a row exists, though, only its owner
+    // may update it.
+    if (existing) {
+      const auth = await verifyAuth(request)
+      if (!auth || auth.pubkey !== body.pubkey) {
+        return Response.json({ error: "Cannot modify another user's profile" }, { status: 403 })
+      }
     }
 
     const user = await prisma.user.upsert({
