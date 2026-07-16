@@ -23,63 +23,17 @@ import {
   type PendingTransferApproval,
 } from '@/lib/transfer';
 import { loadHistory, type HistoryEntry } from '@/lib/history';
-<<<<<<< HEAD
-import Wheel from './Wheel';
-import History from './History';
-import Profile from './Profile';
-import Vaults from './Vaults';
-import CreateVault from './vault/CreateVault';
-import NotificationBell from './NotificationBell';
-import type { UserProfile, TrustScore } from '@/lib/auth/verification';
-import { EyeIcon, SparkleStar, NavIcon } from '@/app/icons';
-=======
 import Wheel from '@/components/dashboard/Wheel';
 import History from '@/components/dashboard/History';
 import Profile from '@/components/profile/Profile';
 import Vaults from '@/components/vault/Vaults';
 import CreateVault from '@/components/vault/CreateVault';
 import NotificationBell from '@/components/shared/NotificationBell';
-import { loadProfile, loadTrustScore, type UserProfile, type TrustScore } from '@/lib/auth/verification';
-import { EyeIcon, SparkleStar } from '@/app/icons';
+import type { UserProfile, TrustScore } from '@/lib/auth/verification';
+import { EyeIcon, SparkleStar, NavIcon } from '@/app/icons';
 
-/** currentColor-based glyphs so the active tab's orange color can be set by the wrapper. */
-function NavGlyph({ type }: { type: Tab }) {
-  if (type === 'home') {
-    return (
-      <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-        <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
-        <polyline points="9 22 9 12 15 12 15 22"></polyline>
-      </svg>
-    );
-  }
-  if (type === 'activity') {
-    return (
-      <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-        <circle cx="12" cy="12" r="10"></circle>
-        <polyline points="12 6 12 12 16 14"></polyline>
-      </svg>
-    );
-  }
-  if (type === 'vaults') {
-    return (
-      <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-        <rect x="3" y="7" width="18" height="13" rx="2"></rect>
-        <path d="M8 7V5a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
-      </svg>
-    );
-  }
-  return (
-    <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-      <circle cx="12" cy="7" r="4"></circle>
-      <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
-    </svg>
-  );
-}
-
-
->>>>>>> e95df95f74157978b495f13a648c486bade19c62
 import PinUnlockPanel from './PinUnlockPanel';
-import DepositReceivePanel from './dashboard/DepositReceivePanel';
+import DepositReceivePanel from '@components/dashboard/DepositReceivePanel';
 import WithdrawPanel from './WithdrawPanel';
 import SendPanel from './SendPanel';
 import type { Panel, Tab } from '@/lib/dashboardTypes';
@@ -127,12 +81,11 @@ interface DashboardProps {
   wallet: WalletContextProps;
   onLogout: () => void | Promise<void>;
   headerActions?: React.ReactNode;
-  connectWalletAction?: React.ReactNode;
 }
 
 const SESSION_KEY_MISSING_MESSAGE = 'Your session key is unavailable. Please unlock your account again.';
 
-export default function SavingsDashboard({ publicKey, wallet, onLogout, headerActions, connectWalletAction }: DashboardProps) {
+export default function SavingsDashboard({ publicKey, wallet, onLogout, headerActions }: DashboardProps) {
   const router = useRouter();
   const configured = contractConfigured();
   const [state, setState] = useState<SavingsState | null>(null);
@@ -509,24 +462,21 @@ return (
           <div className="flex items-center gap-1">
             {headerActions}
           </div>
-          <div className="flex items-center gap-1">
-            {connectWalletAction}
-            <NotificationBell
-              publicKey={publicKey}
-              onNavigateToVault={(vaultId) => {
+          <NotificationBell
+            publicKey={publicKey}
+            onNavigateToVault={(vaultId) => {
+              setActiveTab('vaults');
+              setFocusVaultId(vaultId);
+              const onNavigateToVault = (vaultId: string) => {
                 setActiveTab('vaults');
                 setFocusVaultId(vaultId);
-                const onNavigateToVault = (vaultId: string) => {
-                  setActiveTab('vaults');
-                  setFocusVaultId(vaultId);
-                  // Safety net: clear automatically if nothing ever matches it.
-                  setTimeout(() => {
-                    setFocusVaultId((current) => (current === vaultId ? null : current));
-                  }, 4000);
-                };
-              }}
-            />
-          </div>
+                // Safety net: clear automatically if nothing ever matches it.
+                setTimeout(() => {
+                  setFocusVaultId((current) => (current === vaultId ? null : current));
+                }, 4000);
+              };
+            }}
+          />
         </div>
       )}
 
@@ -728,15 +678,13 @@ return (
               }}
               className="flex-1 flex items-center justify-center"
             >
-              {isSelected ? (
-                <span className="flex items-center justify-center rounded-full bg-orange-50 text-[#FF5E00] p-2.5 animate-fadeIn">
-                  <NavGlyph type={tab} />
-                </span>
-              ) : (
-                <span className="flex items-center justify-center text-slate-400 hover:text-slate-500 transition-colors p-2.5">
-                  <NavGlyph type={tab} />
-                </span>
-              )}
+              <span
+                className={`p-2 rounded-full transition-colors ${
+                  isSelected ? 'bg-slate-100' : 'hover:bg-slate-50'
+                }`}
+              >
+                <NavIcon type={tab} active={isSelected} />
+              </span>
             </button>
           );
         })}
