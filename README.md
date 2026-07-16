@@ -7,6 +7,8 @@ STELLA Vault addresses three critical financial challenges faced by many Filipin
 ## How It Works
 Users can create personal or community-driven "smart vaults" to lock away stablecoins (like USDC) for specific life goals—such as emergency funds, tuition fees, or entrepreneurial capital—without worrying about inflation eroding their local currency or high traditional banking fees.
 
+> **Note on auth vs. KYC:** the app's JWT-based session layer and PIN-unlock flow authenticate a user's *wallet session* (so their signing key stays protected client-side) — they are not identity verification. No government ID or personal identity data is collected or required to create or use a vault; KYC only enters the picture at the off-ramp (see below).
+
 ## How It Uses Stellar
 - Soroban Smart Contracts (Rust): Powers the core collaborative and individual vault parameters. The contracts safely manage multi-user states, cryptographic asset locking, and deposit/withdrawal logic without requiring centralized ledgers.
 - Stellar Asset Contract (SAC): Utilizes native USDC on Stellar out of the box to guarantee hyper-low transaction fees, lightning-fast settlement, and immediate exposure to stable USD values.
@@ -14,36 +16,83 @@ Users can create personal or community-driven "smart vaults" to lock away stable
 
 
 ## Track
-[Which StellarX Philippines track this is submitted to]
+Track 2: Financial Inclusion & Everyday Payments (Secondary alignment with Track 3: DeFi, Stablecoins & Real-World Assets)
 
 ## Tech Stack
-- Framework: [Next.js / React / SvelteKit / ...]
-- Stellar SDK: @stellar/stellar-sdk v[version]
-- Network: [testnet / mainnet]
-- [other key dependencies]
+- Framework: Next.js 16 (App Router) / React 19 / TypeScript 5
+- Stellar SDK: @stellar/stellar-sdk v16.0.1
+- Network: Testnet
+- Wallet: @stellar/freighter-api v6.0.1
+- Database/ORM: Prisma 7.8.0 with @prisma/adapter-neon, on Neon serverless Postgres (@neondatabase/serverless v1.1.0)
+- Auth: jsonwebtoken v9.0.3 (JWT-based session auth)
+- Styling: Tailwind CSS v4 (@tailwindcss/postcss)
+- Icons: lucide-react v1.23.0
+- QR: qrcode v1.5.4 (generate) / jsqr v1.4.0 (scan)
 
 ## Setup & Run
-[Step-by-step. A judge must be able to run this from these instructions alone.]
 
-\`\`\`bash
-git clone [your repo]
-cd [your project]
+### Prerequisites
+- Node.js 20+
+- A Neon Postgres database (or any Postgres instance Prisma can reach)
+- [Freighter wallet](https://www.freighter.app/) browser extension, for connecting a Stellar account in dev
+- A deployed Soroban savings/vault contract (or access to one) if you're testing on-chain features
+
+### 1. Install dependencies
+```bash
 npm install
-# environment variables needed:
-#   NEXT_PUBLIC_SOROBAN_RPC=...
-#   ...
+```
+`postinstall` runs `prisma generate` automatically.
+
+### 2. Configure environment variables
+Create a `.env` file in the project root. At minimum you'll need:
+```bash
+DATABASE_URL=            # Neon Postgres connection string
+JWT_SECRET=               # secret for signing session JWTs
+NEXT_PUBLIC_STELLAR_NETWORK=   # testnet | mainnet (confirm actual var name in your config)
+NEXT_PUBLIC_SOROBAN_RPC_URL=   # Soroban RPC endpoint for your chosen network
+NEXT_PUBLIC_SAVINGS_CONTRACT_ID=   # deployed contract address
+```
+
+### 3. Set up the database
+```bash
+npx prisma migrate dev      # apply migrations locally
+# or
+npx prisma db push          # push schema without migration history
+```
+
+### 4. Run the dev server
+```bash
 npm run dev
-\`\`\`
+```
+App runs at `http://localhost:3000`.
+
+### 5. Connect a wallet
+Install the Freighter extension, create/import a testnet account, and fund it via [Friendbot](https://friendbot.stellar.org) if you're on testnet.
+
+### Build & production
+```bash
+npm run build   # runs `prisma generate` then `next build`
+npm run start
+```
+
+### Lint
+```bash
+npm run lint
+```
 
 ## Network Details
-- Network: [testnet / mainnet]
-- RPC URL: [endpoint]
-- Contract IDs: [if any]
-- Asset issuers: [if any]
+- Network: testnet
+- RPC URL: `https://soroban-testnet.stellar.org` <!-- update if using a dedicated/private RPC provider -->
+- Contract IDs:
+  - Savings/Vault contract: `TODO — fill in after deployment (C... address)`
+- Asset issuers:
+  - USDC: `TODO — fill in issuer G... address (or note if using a testnet mock token)`
 
 ## Team
-- [Name] — @[github-username]
-- ...
+- Ezra Ysabela G. Gellecania — @ezraysabela
+- Aiyesha Threa S. Caña — @aiyesha-cn
+- Nicole Marie T. Eduliantes — @Nicole-Marie-Eduliantes
+- Vonne Chelsea Reese A. Sumbeling — @Vonne01010
 
 ## License
-[MIT / Apache-2.0 / ...]
+Proprietary — All Rights Reserved. Unauthorized copying, distribution, or use of this software, in whole or in part, is strictly prohibited without prior written permission.
