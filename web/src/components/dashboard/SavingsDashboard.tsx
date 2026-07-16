@@ -116,11 +116,12 @@ interface DashboardProps {
   wallet: WalletContextProps;
   onLogout: () => void | Promise<void>;
   headerActions?: React.ReactNode;
+  connectWalletAction?: React.ReactNode;
 }
 
 const SESSION_KEY_MISSING_MESSAGE = 'Your session key is unavailable. Please unlock your account again.';
 
-export default function SavingsDashboard({ publicKey, wallet, onLogout, headerActions }: DashboardProps) {
+export default function SavingsDashboard({ publicKey, wallet, onLogout, headerActions, connectWalletAction }: DashboardProps) {
   const router = useRouter();
   const configured = contractConfigured();
   const [state, setState] = useState<SavingsState | null>(null);
@@ -488,21 +489,24 @@ return (
           <div className="flex items-center gap-1">
             {headerActions}
           </div>
-          <NotificationBell
-            publicKey={publicKey}
-            onNavigateToVault={(vaultId) => {
-              setActiveTab('vaults');
-              setFocusVaultId(vaultId);
-              const onNavigateToVault = (vaultId: string) => {
+          <div className="flex items-center gap-1">
+            {connectWalletAction}
+            <NotificationBell
+              publicKey={publicKey}
+              onNavigateToVault={(vaultId) => {
                 setActiveTab('vaults');
                 setFocusVaultId(vaultId);
-                // Safety net: clear automatically if nothing ever matches it.
-                setTimeout(() => {
-                  setFocusVaultId((current) => (current === vaultId ? null : current));
-                }, 4000);
-              };
-            }}
-          />
+                const onNavigateToVault = (vaultId: string) => {
+                  setActiveTab('vaults');
+                  setFocusVaultId(vaultId);
+                  // Safety net: clear automatically if nothing ever matches it.
+                  setTimeout(() => {
+                    setFocusVaultId((current) => (current === vaultId ? null : current));
+                  }, 4000);
+                };
+              }}
+            />
+          </div>
         </div>
       )}
 

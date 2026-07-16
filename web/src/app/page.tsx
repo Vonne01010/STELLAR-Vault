@@ -78,7 +78,6 @@ export default function Home() {
     router.replace('/login');
   }, [disconnect, router]);
 
-  // Don't flash the dashboard while checking auth
   if (!authChecked) {
     return (
       <main className="min-h-screen w-full bg-[#FAF6F0] flex items-center justify-center">
@@ -138,7 +137,6 @@ export default function Home() {
             onLogout={handleLogout}
             headerActions={
               <>
-                <ConnectWallet {...wallet} />
                 {publicKey && !funded && (
                   <FundAccount publicKey={publicKey} onFunded={refresh} />
                 )}
@@ -147,6 +145,7 @@ export default function Home() {
                 )}
               </>
             }
+            connectWalletAction={<ConnectWallet {...wallet} />}
           />
         </div>
         
