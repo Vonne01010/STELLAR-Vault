@@ -547,9 +547,9 @@ return (
             {/* Slide Inline Configuration Panels */}
             {panel && (
               <div className="mx-4 mt-2 space-y-3">
-                {(error || msg || transferState.status !== 'idle') && (
+                {(transferState.status !== 'idle') && (
                   <div className="p-3 bg-white rounded-xl border border-slate-100 space-y-1 text-[11px]">
-                    {transferState.status !== 'idle' && <p className="text-slate-400 font-light">{transferState.message}</p>}
+                    <p className="text-slate-400 font-light">{transferState.message}</p>
                   </div>
                 )}
 
