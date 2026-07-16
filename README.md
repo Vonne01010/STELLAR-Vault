@@ -21,6 +21,7 @@ Track 2: Financial Inclusion & Everyday Payments (Secondary alignment with Track
 ## Tech Stack
 - Framework: Next.js 16 (App Router) / React 19 / TypeScript 5
 - Stellar SDK: @stellar/stellar-sdk v16.0.1
+- HD Wallet: stellar-hd-wallet (mnemonic/keypair derivation)
 - Network: Testnet
 - Wallet: @stellar/freighter-api v6.0.1
 - Database/ORM: Prisma 7.8.0 with @prisma/adapter-neon, on Neon serverless Postgres (@neondatabase/serverless v1.1.0)
@@ -89,9 +90,9 @@ npm run lint
   - USDC: `TODO — fill in issuer G... address (or note if using a testnet mock token)`
 
 ## Team
-- Ezra Ysabela G. Gellecania — @ezraysabela
-- Aiyesha Threa S. Caña — @aiyesha-cn
-- Nicole Marie T. Eduliantes — @Nicole-Marie-Eduliantes
+- Ezra Ysabela G. Gellecania — @ezraysabela 
+- Aiyesha Threa S. Caña — @aiyesha-cn 
+- Nicole Marie T. Eduliantes — @Nicole-Marie-Eduliantes 
 - Vonne Chelsea Reese A. Sumbeling — @Vonne01010
 
 ## License
