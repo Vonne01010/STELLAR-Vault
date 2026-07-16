@@ -1,5 +1,6 @@
 import "dotenv/config"
 import { prisma } from "@/lib/prisma"
+import { verifyAuth } from "@/lib/verifyAuth"
 
 export async function GET() {
   const users = await prisma.user.findMany({
@@ -10,11 +11,23 @@ export async function GET() {
 }
 
 export async function POST(request: Request) {
+  const auth = await verifyAuth(request)
+  if (!auth) {
+    return Response.json({ error: "Unauthorized" }, { status: 401 })
+  }
+
   try {
     const body = await request.json()
 
     if (!body.pubkey) {
       return Response.json({ error: "pubkey is required" }, { status: 400 })
+    }
+
+    // A caller can only ever create/update their own record — without this,
+    // any authenticated user could pass someone else's pubkey and overwrite
+    // that person's username/avatar.
+    if (body.pubkey !== auth.pubkey) {
+      return Response.json({ error: "Cannot modify another user's profile" }, { status: 403 })
     }
 
     const existing = await prisma.user.findUnique({ where: { pubkey: body.pubkey } })
@@ -44,4 +57,4 @@ export async function POST(request: Request) {
     console.error("User upsert error:", error)
     return Response.json({ error: "Failed to save user" }, { status: 500 })
   }
-} 
+}
