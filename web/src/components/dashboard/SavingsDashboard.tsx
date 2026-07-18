@@ -31,7 +31,7 @@ import CreateVault from '@/components/vault/CreateVault';
 import NotificationBell from '@/components/shared/NotificationBell';
 import { useToast } from '@/components/shared/Toast';
 import { loadProfile, loadTrustScore, type UserProfile, type TrustScore } from '@/lib/auth/verification';
-import { EyeIcon, SparkleStar } from '@/app/icons';
+import { EyeIcon, SparkleStar, NavIcon } from '@/app/icons';
 
 /** currentColor-based glyphs so the active tab's orange color can be set by the wrapper. */
 function NavGlyph({ type }: { type: Tab }) {
@@ -69,7 +69,7 @@ function NavGlyph({ type }: { type: Tab }) {
 
 
 import PinUnlockPanel from './PinUnlockPanel';
-import DepositReceivePanel from './DepositReceivePanel';
+import DepositReceivePanel from '@/components/dashboard/DepositReceivePanel';
 import WithdrawPanel from './WithdrawPanel';
 import SendPanel from './SendPanel';
 import type { Panel, Tab } from '@/lib/dashboardTypes';
@@ -117,12 +117,11 @@ interface DashboardProps {
   wallet: WalletContextProps;
   onLogout: () => void | Promise<void>;
   headerActions?: React.ReactNode;
-  connectWalletAction?: React.ReactNode;
 }
 
 const SESSION_KEY_MISSING_MESSAGE = 'Your session key is unavailable. Please unlock your account again.';
 
-export default function SavingsDashboard({ publicKey, wallet, onLogout, headerActions, connectWalletAction }: DashboardProps) {
+export default function SavingsDashboard({ publicKey, wallet, onLogout, headerActions }: DashboardProps) {
   const router = useRouter();
   const configured = contractConfigured();
   const { showToast } = useToast();
@@ -141,6 +140,8 @@ export default function SavingsDashboard({ publicKey, wallet, onLogout, headerAc
   const [copied, setCopied] = useState(false);
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [trust, setTrust] = useState<TrustScore | null>(null);
+  const [points, setPoints] = useState<number>(0);
+  const [vaultsCount, setVaultsCount] = useState<number>(0);
   const [focusVaultId, setFocusVaultId] = useState<string | null>(null);
 
   // Form states
@@ -226,9 +227,22 @@ export default function SavingsDashboard({ publicKey, wallet, onLogout, headerAc
   }, [publicKey, showToast]);
 
   useEffect(() => {
-    setProfile(loadProfile());
-    setTrust(loadTrustScore());
-  }, []);
+    if (!publicKey) return;
+    authFetch('/api/users/me')
+    .then((r) => r.json())
+    .then((d) => {
+    setProfile(d.profile ?? null);
+    setTrust(d.trust ?? null);
+    setPoints(d.points ?? 0);
+    setVaultsCount(d.vaultsCount ?? 0);
+    })
+    .catch(() => {
+    setProfile(null);
+    setTrust(null);
+    setPoints(0);
+    setVaultsCount(0);
+    });
+  }, [publicKey]);
 
   useEffect(() => {
     if (!configured) return;
@@ -484,24 +498,21 @@ return (
           <div className="flex items-center gap-1">
             {headerActions}
           </div>
-          <div className="flex items-center gap-1">
-            {connectWalletAction}
-            <NotificationBell
-              publicKey={publicKey}
-              onNavigateToVault={(vaultId) => {
+          <NotificationBell
+            publicKey={publicKey}
+            onNavigateToVault={(vaultId) => {
+              setActiveTab('vaults');
+              setFocusVaultId(vaultId);
+              const onNavigateToVault = (vaultId: string) => {
                 setActiveTab('vaults');
                 setFocusVaultId(vaultId);
-                const onNavigateToVault = (vaultId: string) => {
-                  setActiveTab('vaults');
-                  setFocusVaultId(vaultId);
-                  // Safety net: clear automatically if nothing ever matches it.
-                  setTimeout(() => {
-                    setFocusVaultId((current) => (current === vaultId ? null : current));
-                  }, 4000);
-                };
-              }}
-            />
-          </div>
+                // Safety net: clear automatically if nothing ever matches it.
+                setTimeout(() => {
+                  setFocusVaultId((current) => (current === vaultId ? null : current));
+                }, 4000);
+              };
+            }}
+          />
         </div>
       )}
 
@@ -667,6 +678,12 @@ return (
               loading={loading}
               onRefresh={refresh}
               onOpenSettings={() => router.push('/settings')}
+              points={points}
+              vaultsCount={vaultsCount}
+              username={profile?.displayName ?? undefined}
+              phoneVerified={profile?.phoneVerified}
+              phoneNumber={profile?.phoneNumber ?? undefined}
+              identityVerified={profile?.alternativeIdVerified}
             />
           </div>
         )}
@@ -700,15 +717,13 @@ return (
               }}
               className="flex-1 flex items-center justify-center"
             >
-              {isSelected ? (
-                <span className="flex items-center justify-center rounded-full bg-orange-50 text-[#FF5E00] p-2.5 animate-fadeIn">
-                  <NavGlyph type={tab} />
-                </span>
-              ) : (
-                <span className="flex items-center justify-center text-slate-400 hover:text-slate-500 transition-colors p-2.5">
-                  <NavGlyph type={tab} />
-                </span>
-              )}
+              <span
+                className={`p-2 rounded-full transition-colors ${
+                  isSelected ? 'bg-slate-100' : 'hover:bg-slate-50'
+                }`}
+              >
+                <NavIcon type={tab} active={isSelected} />
+              </span>
             </button>
           );
         })}

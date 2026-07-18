@@ -4,6 +4,7 @@ import { generateKeypair, keypairFromSecret, fundTestnetAccount, NETWORK_PASSPHR
 import { encryptSecretKey, decryptSecretKey } from '@/lib/auth/encryption';
 import { saveAccount, loadAccount, clearAccount } from '@/lib/auth/storage';
 import { TransactionBuilder } from '@stellar/stellar-sdk';
+import { recoverAndStoreAccount } from "@/lib/auth/recovery";
 
 export type WalletStatus =
   | 'disconnected'
@@ -242,14 +243,15 @@ async function authenticateWithFreighter(address: string): Promise<string> {
 export async function authFetch(path: string, options: RequestInit = {}): Promise<Response> {
   const token = currentSnapshot.authToken;
   const headers = new Headers(options.headers);
-  headers.set('Content-Type', 'application/json');
+  if (!(options.body instanceof FormData)) {
+    headers.set('Content-Type', 'application/json');
+  }
   if (token) {
     headers.set('Authorization', `Bearer ${token}`);
   }
 
   const res = await fetch(path, { ...options, headers });
 
-  // Token expired or invalid — clear it so the UI can prompt re-auth.
   if (res.status === 401) {
     setSnapshot({ authToken: null });
     persistSnapshot(currentSnapshot);
@@ -540,6 +542,45 @@ export async function createPinAccount(pin: string): Promise<{ publicKey: string
   }
 }
 
+export async function recoverPinAccount(mnemonic: string, pin: string): Promise<{ publicKey: string }> {
+  setSnapshot({ status: 'connecting', error: null });
+
+  try {
+    const { publicKey, secretKey } = await recoverAndStoreAccount(mnemonic, pin);
+    currentSecretKey = secretKey;
+
+    const token = await authenticateWithSecretKey(secretKey);
+
+    const nextSnapshot: WalletSnapshot = {
+      address: publicKey,
+      publicKey,
+      network: 'testnet',
+      provider: 'passkey',
+      signerAvailable: true,
+      status: 'ready',
+      initialized: true,
+      error: null,
+      isConnected: true,
+      authToken: token,
+    };
+
+    currentSnapshot = nextSnapshot;
+    persistSnapshot(nextSnapshot);
+    emit();
+
+    await ensureUserExists(publicKey);
+
+    return { publicKey };
+  } catch (error) {
+    setSnapshot({
+      status: 'error',
+      error: getErrorMessage(error),
+      authToken: null,
+    });
+    throw error;
+  }
+}
+
 /** Unlocks an existing PIN account and authenticates it. Throws on wrong PIN. */
 export async function unlockPinAccount(pin: string): Promise<void> {
   setSnapshot({ status: 'connecting', error: null });
@@ -612,6 +653,7 @@ if (typeof window !== 'undefined') {
     };
     emit();
   }
+
 
   void reconnectWithStoredSession();
 }

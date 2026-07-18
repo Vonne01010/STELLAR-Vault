@@ -1,5 +1,6 @@
 generator client {
-  provider = "prisma-client-js"
+  provider        = "prisma-client-js"
+  previewFeatures = ["driverAdapters"]
 }
 
 datasource db {
@@ -14,12 +15,35 @@ model User {
   createdAt DateTime @default(now())
   deletedAt DateTime?
 
+  points Int @default(0)
+
+  verificationLevel Int     @default(1)
+  phone             String? @unique
+  phoneVerified     Boolean @default(false)
+  email             String?
+
+  alternativeIdType      String?
+  alternativeIdNumber    String?
+  alternativeIdImageUrl  String?
+  alternativeIdVerified  Boolean @default(false)
+
+  endorsementCode String?
+  selfieVerified  Boolean @default(false)
+
+  verificationReviews VerificationReview[]
+
   vaults      Vault[]
   invitations Invitation[]
   logs        ActivityLog[]
   memberships VaultMember[]
   sentTransfers     PendingTransfer[] @relation("SentTransfers")
   receivedTransfers PendingTransfer[] @relation("ReceivedTransfers")
+
+  trustScore                Int @default(0)
+  savingsGoalsCompleted     Int @default(0)
+  onTimeDeposits            Int @default(0)
+  collaborativeVaultsCount  Int @default(0)
+  disputesCount             Int @default(0)
 }
 
 model Vault {
@@ -50,7 +74,7 @@ model VaultMember {
   id        String   @id @default(cuid())
   vaultId   String
   pubkey    String
-  role      String   @default("Contributor") // "Owner" | "Contributor" — mirrors contract's Role enum
+  role      String   @default("Contributor")
   addedAt   DateTime @default(now())
 
   vault Vault @relation(fields: [vaultId], references: [id])
@@ -105,9 +129,21 @@ model PendingTransfer {
   amount            Float
   senderAuthorized  Boolean  @default(false)
   receiverAuthorized Boolean @default(false)
-  status            String   @default("awaiting_authorization") // "awaiting_authorization" | "ready_to_submit" | "submitted"
+  status            String   @default("awaiting_authorization")
   createdAt         DateTime @default(now())
 
   sender    User @relation("SentTransfers", fields: [senderPubkey], references: [pubkey])
   recipient User @relation("ReceivedTransfers", fields: [recipientPubkey], references: [pubkey])
+}
+
+model VerificationReview {
+  id         String   @id @default(cuid())
+  userId     String
+  level      Int
+  decision   String
+  reason     String?
+  reviewedBy String?
+  createdAt  DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id])
 }

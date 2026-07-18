@@ -1,6 +1,30 @@
 import "dotenv/config"
 import { prisma } from "@/lib/prisma"
 import { verifyAuth } from "@/lib/verifyAuth"
+import { loadProfile, loadTrustScore } from "@/lib/auth/verification"
+
+export async function GET(request: Request) {
+  const auth = await verifyAuth(request)
+  if (!auth) {
+    return Response.json({ error: "Unauthorized" }, { status: 401 })
+  }
+
+  const [profile, trust] = await Promise.all([
+    loadProfile(auth.pubkey),
+    loadTrustScore(auth.pubkey),
+  ])
+
+  if (!profile) {
+    return Response.json({ error: "Account not found" }, { status: 404 })
+  }
+
+  const [user, vaultsCount] = await Promise.all([
+    prisma.user.findUnique({ where: { pubkey: auth.pubkey }, select: { points: true } }),
+    prisma.vaultMember.count({ where: { pubkey: auth.pubkey } }),
+  ])
+
+  return Response.json({ profile, trust, points: user?.points ?? 0, vaultsCount })
+}
 
 export async function DELETE(request: Request) {
   const auth = await verifyAuth(request)
@@ -15,8 +39,6 @@ export async function DELETE(request: Request) {
       return Response.json({ error: "Account no longer active" }, { status: 401 })
     }
 
-    // Block deletion if the user still owns a vault holding funds.
-    // Avoids silently orphaning a balance nobody can act on afterward.
     const ownedVaultWithBalance = await prisma.vault.findFirst({
       where: {
         ownerPubkey: auth.pubkey,
@@ -34,7 +56,6 @@ export async function DELETE(request: Request) {
       )
     }
 
-    // Block deletion if a transfer involving this user hasn't finished yet.
     const pendingTransfer = await prisma.pendingTransfer.findFirst({
       where: {
         OR: [{ senderPubkey: auth.pubkey }, { recipientPubkey: auth.pubkey }],
@@ -54,9 +75,6 @@ export async function DELETE(request: Request) {
       where: { pubkey: auth.pubkey },
       data: {
         deletedAt: new Date(),
-        // Scrub identifying profile info on delete; pubkey itself is kept
-        // since historical ActivityLog/Vault/Invitation records still
-        // reference it by foreign key.
         username: null,
         avatarUrl: null,
       },
