@@ -1,0 +1,6 @@
+-- AlterTable
+ALTER TABLE "User" ADD COLUMN     "collaborativeVaultsCount" INTEGER NOT NULL DEFAULT 0,
+ADD COLUMN     "disputesCount" INTEGER NOT NULL DEFAULT 0,
+ADD COLUMN     "onTimeDeposits" INTEGER NOT NULL DEFAULT 0,
+ADD COLUMN     "savingsGoalsCompleted" INTEGER NOT NULL DEFAULT 0,
+ADD COLUMN     "trustScore" INTEGER NOT NULL DEFAULT 0;
