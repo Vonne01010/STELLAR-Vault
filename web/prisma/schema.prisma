@@ -21,14 +21,18 @@ model User {
   phone             String? @unique
   phoneVerified     Boolean @default(false)
   email             String?
+  country           String?
+  tosAccepted       Boolean @default(false)
 
   alternativeIdType      String?
   alternativeIdNumber    String?
   alternativeIdImageUrl  String?
   alternativeIdVerified  Boolean @default(false)
 
-  endorsementCode String?
-  selfieVerified  Boolean @default(false)
+  endorsementCode      String?
+  selfieVerified       Boolean @default(false)
+  governmentIdVerified Boolean @default(false)
+  kycPartner           String?
 
   verificationReviews VerificationReview[]
 

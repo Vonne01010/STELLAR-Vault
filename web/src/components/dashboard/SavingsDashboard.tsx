@@ -117,11 +117,12 @@ interface DashboardProps {
   wallet: WalletContextProps;
   onLogout: () => void | Promise<void>;
   headerActions?: React.ReactNode;
+  connectWalletAction?: React.ReactNode
 }
 
 const SESSION_KEY_MISSING_MESSAGE = 'Your session key is unavailable. Please unlock your account again.';
 
-export default function SavingsDashboard({ publicKey, wallet, onLogout, headerActions }: DashboardProps) {
+export default function SavingsDashboard({ publicKey, wallet, onLogout, headerActions, connectWalletAction }: DashboardProps) {
   const router = useRouter();
   const configured = contractConfigured();
   const { showToast } = useToast();

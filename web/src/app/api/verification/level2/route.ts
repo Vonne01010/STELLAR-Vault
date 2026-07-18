@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { verifyAuth } from "@/lib/verifyAuth";
-import { submitLevel2Verification } from "@/lib/auth/verification";
+import { submitLevel2Verification } from "@/lib/auth/verification.server";
 
 export async function POST(req: NextRequest) {
   const auth = await verifyAuth(req);
