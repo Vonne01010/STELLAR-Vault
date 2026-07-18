@@ -5,10 +5,11 @@ import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import { useWallet } from '@/hooks/useWallet';
 import { hasAccount } from '@/lib/auth/storage';
-import ConnectWallet from '@/components/ConnectWallet';
-import FundAccount from '@/components/FundAccount';
-import AddTrustline from '@/components/AddTrustline';
-import SavingsDashboard from '@/components/SavingsDashboard';
+import { fetchBalances } from '@/lib/balances';
+import ConnectWallet from '@/components/wallet/ConnectWallet';
+import FundAccount from '@/components/wallet/FundAccount';
+import AddTrustline from '@/components/wallet/AddTrustline';
+import SavingsDashboard from '@/components/dashboard/SavingsDashboard';
 
 export default function Home() {
   const router = useRouter();
@@ -16,8 +17,30 @@ export default function Home() {
   const { publicKey, connecting, disconnect } = wallet;
   const [localRefreshKey, setLocalRefreshKey] = useState(0);
   const [authChecked, setAuthChecked] = useState(false);
+  const [funded, setFunded] = useState(false);
+  const [linked, setLinked] = useState(false);
 
   const refresh = useCallback(() => setLocalRefreshKey((k) => k + 1), []);
+
+  // Track wallet setup completion so the Fund/Trustline header icons can
+  // disappear once they're no longer needed — they're one-time onboarding
+  // steps, not ongoing controls like Connect or Notifications.
+  useEffect(() => {
+    let ignore = false;
+    if (!publicKey) { setFunded(false); setLinked(false); return; }
+    fetchBalances(publicKey)
+      .then((balances) => {
+        if (ignore) return;
+        setFunded(balances ? ('funded' in balances ? !!balances.funded : true) : false);
+        setLinked(!!balances && 'usdc' in balances);
+      })
+      .catch(() => {
+        if (ignore) return;
+        setFunded(false);
+        setLinked(false);
+      });
+    return () => { ignore = true; };
+  }, [publicKey, localRefreshKey]);
 
   // ── Auth gate ──────────────────────────────────────────────
   useEffect(() => {
@@ -55,7 +78,6 @@ export default function Home() {
     router.replace('/login');
   }, [disconnect, router]);
 
-  // Don't flash the dashboard while checking auth
   if (!authChecked) {
     return (
       <main className="min-h-screen w-full bg-[#FAF6F0] flex items-center justify-center">
@@ -72,27 +94,6 @@ export default function Home() {
   return (
     <main className="min-h-screen w-full bg-[#FAF8F5] text-slate-800 antialiased selection:bg-[#FF5E00]/10 pb-16">
       <div className="mx-auto max-w-md px-4 py-8">
-
-        {/* Core Header Section */}
-        <header className="mb-6 flex items-center justify-between gap-4 px-1">
-          <div>
-            <div className="flex items-center gap-2.5">
-              {/* Handled Mascot Replacement */}
-              <div className="w-7 h-7 relative shrink-0">
-                <Image
-                  src="/stellamascot.png"
-                  alt="Stella Mascot"
-                  fill
-                  priority
-                  sizes="28px"
-                  className="object-contain"
-                />
-              </div>
-              <h1 className="text-xl font-black text-slate-900 tracking-tight">STELLA Vault</h1>
-            </div>
-          </div>
-          <ConnectWallet {...wallet} />
-        </header>
 
         {/* Empty Wallet State Frame */}
         {!publicKey && !connecting && (
@@ -127,21 +128,25 @@ export default function Home() {
           </div>
         )}
 
-        {/* On-Chain Pipeline Interaction Gate */}
-        {publicKey && (
-          <div className="mb-5 flex flex-wrap items-center gap-2 px-1">
-            <div className="flex-1 min-w-35">
-              <FundAccount publicKey={publicKey} onFunded={refresh} />
-            </div>
-            <div className="flex-1 min-w-35">
-              <AddTrustline publicKey={publicKey} onDone={refresh} />
-            </div>
-          </div>
-        )}
-
         {/* Stellar Core Performance Interface */}
         <div className="mt-2">
-          <SavingsDashboard key={localRefreshKey} wallet={wallet} publicKey={publicKey} onLogout={handleLogout} />
+          <SavingsDashboard
+            key={localRefreshKey}
+            wallet={wallet}
+            publicKey={publicKey}
+            onLogout={handleLogout}
+            headerActions={
+              <>
+                {publicKey && !funded && (
+                  <FundAccount publicKey={publicKey} onFunded={refresh} />
+                )}
+                {publicKey && !linked && (
+                  <AddTrustline publicKey={publicKey} onDone={refresh} />
+                )}
+              </>
+            }
+            connectWalletAction={<ConnectWallet {...wallet} />}
+          />
         </div>
         
         {/* Brand System Footer Deck Layout */}
