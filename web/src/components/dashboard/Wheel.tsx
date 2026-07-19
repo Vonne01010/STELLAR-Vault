@@ -20,13 +20,22 @@ interface WheelProps {
   setPanel: (panel: Panel) => void;
 }
 
-// Fixed slot angles ordered clockwise to accurately match the visual mockup placement geometry
+// Fixed slot angles ordered clockwise to accurately match the visual mockup placement geometry[cite: 1]
 const SLOTS = [
-  { angle: 0,    tab: 'home', panel: 'deposit'  as Panel, label: "Deposit"  },
+  { angle: 0,    tab: 'home', panel: 'deposit'  as Panel, label: "Deposit"  }, // Top[cite: 1]
   { angle: -72,  tab: 'home', panel: 'withdraw' as Panel, label: "Withdraw" },
   { angle: -144, tab: 'home', panel: 'create'   as Panel, label: "Vault"     },
   { angle: -216, tab: 'home', panel: 'receive'  as Panel, label: "Receive"  },
   { angle: -288, tab: 'home', panel: 'send'     as Panel, label: "Send"     },
+];
+
+// Configuration for particles surrounding the active option node
+const PARTICLE_OFFSETS = [
+  { top: '-8%', left: '20%', size: 'w-2 h-2', delay: '0s', opacity: 'opacity-80' },
+  { top: '4%', left: '76%', size: 'w-1.5 h-1.5', delay: '0.2s', opacity: 'opacity-60' },
+  { top: '-14%', left: '52%', size: 'w-1 h-1', delay: '0.4s', opacity: 'opacity-40' },
+  { top: '22%', left: '-10%', size: 'w-1.5 h-1.5', delay: '0.1s', opacity: 'opacity-50' },
+  { top: '80%', left: '85%', size: 'w-1 h-1', delay: '0.3s', opacity: 'opacity-30' },
 ];
 
 function getClosestSlot(currentRotation: number) {
@@ -100,24 +109,27 @@ export default function Wheel({ activeTab, panel, setActiveTab, setPanel }: Whee
 
   const transitionStyle = isDragging
     ? 'none'
-    : 'transform 0.6s cubic-bezier(0.25, 1, 0.5, 1)';
+    : 'transform 0.6s cubic-bezier(0.25, 1, 0.5, 1)'; // Matches visual mockup frame snap[cite: 1]
 
   return (
     <section className="relative flex flex-col items-center justify-center select-none w-full my-6">
+
+      {/* Ambient dynamic glow mirroring current status color */}
+      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-80 h-80 rounded-full bg-linear-to-br from-orange-200/20 via-cyan-200/10 to-transparent blur-2xl pointer-events-none" />
       
-      {/* Outer Dotted Track Boundary */}
+      {/* Structural Track Ring Boundary */}
       <div
         ref={wheelRef}
         onPointerDown={handlePointerDown}
         onPointerMove={handlePointerMove}
         onPointerUp={handlePointerUp}
         onPointerCancel={handlePointerUp}
-        className={`relative w-72 h-72 rounded-full border border-amber-200/60 bg-transparent flex items-center justify-center transition-colors duration-200 ${
-          isDragging ? 'cursor-grabbing border-[#FF9F1C]/50 bg-amber-50/10' : 'cursor-grab'
+        className={`relative w-72 h-72 rounded-full border border-amber-100/70 bg-transparent flex items-center justify-center transition-colors duration-200 ${
+          isDragging ? 'cursor-grabbing border-cyan-300 bg-cyan-50/5' : 'cursor-grab'
         }`}
         style={{ touchAction: 'none' }}
       >
-        {/* Rotatable Node Wheel Structural Frame */}
+        {/* Rotatable Node Wheel Structural Frame[cite: 1] */}
         <div
           className="absolute inset-0 rounded-full"
           style={{ transform: `rotate(${currentRotation}deg)`, transition: transitionStyle }}
@@ -149,14 +161,38 @@ export default function Wheel({ activeTab, panel, setActiveTab, setPanel }: Whee
                   transform: 'translate(-50%, -50%)',
                 }}
               >
-                {/* Multi-tone Action Button Circle with Cream & Yellow/Orange Hover Triggers */}
+                {/* Dynamically Tracked Particle Cluster - Only renders around active element */}
+                {isActive && (
+                  <div 
+                    className="absolute inset-0 pointer-events-none"
+                    style={{
+                      transform: `rotate(${-currentRotation}deg)`,
+                      transition: isDragging ? 'none' : 'transform 0.6s cubic-bezier(0.25, 1, 0.5, 1)',
+                    }}
+                  >
+                    {PARTICLE_OFFSETS.map((p, pIndex) => (
+                      <div
+                        key={pIndex}
+                        className={`absolute rounded-full bg-cyan-400/80 shadow-xs shadow-cyan-300 ${p.size} ${p.opacity} animate-pulse`}
+                        style={{
+                          top: p.top,
+                          left: p.left,
+                          animationDelay: p.delay,
+                          animationDuration: '2s'
+                        }}
+                      />
+                    ))}
+                  </div>
+                )}
+
+                {/* Multitone Action Button Circle */}
                 <button
                   type="button"
                   onPointerDown={(e) => handleIconTap(e, slot)}
-                  className={`pointer-events-auto flex items-center justify-center rounded-full w-12 h-12 shadow-sm border transition-all duration-150 outline-none active:scale-90 hover:scale-105 ${
+                  className={`pointer-events-auto flex items-center justify-center rounded-full w-12 h-12 shadow-xs border transition-all duration-150 outline-hidden active:scale-90 hover:scale-105 ${
                     isActive 
-                      ? 'bg-linear-to-b from-white to-orange-50 border-[#FF9F1C] text-[#E3790A] shadow-orange-200/60 ring-2 ring-orange-100' 
-                      : 'bg-linear-to-b from-white to-amber-50/20 border-amber-100/70 text-[#FF9F1C] hover:border-orange-200'
+                      ? 'bg-linear-to-b from-white to-cyan-50/50 border-cyan-400 text-cyan-500 shadow-cyan-200/60 ring-2 ring-cyan-100' 
+                      : 'bg-linear-to-b from-white to-amber-50/25 border-orange-200/60 text-[#FF9F1C] hover:border-orange-400 hover:shadow-md'
                   }`}
                   style={{
                     transform: `rotate(${-currentRotation}deg)`,
@@ -166,7 +202,7 @@ export default function Wheel({ activeTab, panel, setActiveTab, setPanel }: Whee
                   {icons[slot.panel ?? '']}
                 </button>
                 
-                {/* Light Teal Accent Label System - Counter-rotated */}
+                {/* Light Counter-Rotated Context Labels */}
                 <div 
                   className="w-24 text-center mt-2 pointer-events-none flex justify-center"
                   style={{
@@ -176,7 +212,7 @@ export default function Wheel({ activeTab, panel, setActiveTab, setPanel }: Whee
                 >
                   <span className={`text-[10px] tracking-wider block px-2 py-0.5 rounded-md transition-all duration-300 uppercase ${
                     isActive 
-                      ? 'text-[#B4650B] bg-orange-50/90 font-bold border border-orange-100' 
+                      ? 'text-cyan-600 bg-cyan-50/90 font-bold font-mono border border-cyan-100' 
                       : 'text-slate-500 font-medium'
                   }`}>
                     {slot.label}
@@ -187,10 +223,10 @@ export default function Wheel({ activeTab, panel, setActiveTab, setPanel }: Whee
           })}
         </div>
 
-        {/* Central Stationary Cream Core Dial Hub */}
-        <div className="w-32 h-32 rounded-full bg-white flex items-center justify-center z-20 shadow-[inset_0_2px_10px_rgba(255,159,28,0.08),0_10px_24px_-10px_rgba(180,101,11,0.35)] relative pointer-events-none">
+        {/* Central Stationary Core Dial Hub[cite: 1] */}
+        <div className="w-32 h-32 rounded-full bg-white flex items-center justify-center z-20 shadow-[inset_0_2px_10px_rgba(255,159,28,0.05),0_10px_24px_-10px_rgba(180,101,11,0.2)] relative pointer-events-none">
           
-          {/* Active Rotational Tracking Indicator Yellow/Orange Notch */}
+          {/* Central Active Tracking Index Notch */}
           <div 
             className="absolute inset-1 rounded-full"
             style={{ 
@@ -198,13 +234,12 @@ export default function Wheel({ activeTab, panel, setActiveTab, setPanel }: Whee
               transition: isDragging ? 'none' : 'transform 0.6s cubic-bezier(0.25, 1, 0.5, 1)'
             }}
           >
-            <div className="absolute top-0 left-1/2 -translate-x-1/2 w-2 h-2 bg-[#FF9F1C] rounded-full shadow-xs shadow-orange-300" />
+            <div className="absolute top-0 left-1/2 -translate-x-1/2 w-2 h-2 rounded-full bg-linear-to-br from-[#FF9F1C] to-cyan-400 shadow-xs shadow-cyan-300/80" />
           </div>
 
-          {/* Inner Decorative Shield Cream & White Gradient Ring Container */}
-          <div className="w-26 h-26 rounded-full border-4 border-amber-50/50 bg-linear-to-b from-white to-amber-50/30 flex items-center justify-center shadow-inner">
-            {/* Core Shield Emblem Representation */}
-            <div className="w-9 h-9 text-[#FF9F1C] flex items-center justify-center filter drop-shadow-[0_2px_4px_rgba(255,159,28,0.15)]">
+          {/* Decorative Inner Shield Contained Gradient Cover[cite: 1] */}
+          <div className="w-26 h-26 rounded-full border-4 border-amber-50/30 bg-linear-to-b from-white to-amber-50/20 flex items-center justify-center shadow-inner">
+            <div className="w-9 h-9 text-[#FF9F1C] flex items-center justify-center filter drop-shadow-[0_2px_4px_rgba(255,159,28,0.12)]">
               <ShieldEmblemIcon className="w-full h-full" />
             </div>
           </div>
