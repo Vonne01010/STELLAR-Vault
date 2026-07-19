@@ -1,13 +1,17 @@
 'use client';
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { authFetch, walletService, signWithCurrentAccount } from '@/lib/wallet';
-import { buildDistributeXDR, buildUpdateGoalXDR, buildUpdateLockXDR, buildRemoveMemberXDR } from '@/lib/contract';
 import { submitSignedXDR, pollTransaction } from '@/lib/payment';
 import { depositUSDC, withdrawUSDC } from '@/lib/transfer';
 import InviteMemberModal from '@/components/vault/InviteMemberModal';
 import PendingConfirmations from '@/components/vault/PendingConfirmations';
 import MyInvitations from '@/components/profile/MyInvitations';
 import { RefreshIcon } from '@/app/icons';
+import { buildDistributeXDR,
+         buildUpdateGoalXDR, 
+         buildUpdateLockXDR, 
+         buildRemoveMemberXDR, 
+         buildCloseVaultXDR } from '@/lib/contract';
 
 interface VaultData {
   id: string;
@@ -240,9 +244,15 @@ function VaultCard({
   };
 
   const handleDeletePersonalVault = async () => {
+    if (!publicKey) return;
     setDeletingVault(true);
     setDeleteError('');
     try {
+      const xdr = await buildCloseVaultXDR(publicKey, vault.onChainVaultId);
+      const signedXdr = await signWithCurrentAccount(xdr);
+      const hash = await submitSignedXDR(signedXdr);
+      await pollTransaction(hash);
+
       const res = await authFetch(`/api/vaults/${vault.id}`, { method: 'DELETE' });
       const data = await res.json();
       if (!res.ok) throw new Error(data?.error ?? 'Failed to delete vault');
