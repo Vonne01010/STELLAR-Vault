@@ -22,20 +22,25 @@ interface WheelProps {
 
 // Fixed slot angles ordered clockwise to accurately match the visual mockup placement geometry[cite: 1]
 const SLOTS = [
-  { angle: 0,    tab: 'home', panel: 'deposit'  as Panel, label: "Deposit"  }, // Top[cite: 1]
+  { angle: 0,    tab: 'home', panel: 'deposit'  as Panel, label: "Deposit"  },
   { angle: -72,  tab: 'home', panel: 'withdraw' as Panel, label: "Withdraw" },
   { angle: -144, tab: 'home', panel: 'create'   as Panel, label: "Vault"     },
   { angle: -216, tab: 'home', panel: 'receive'  as Panel, label: "Receive"  },
   { angle: -288, tab: 'home', panel: 'send'     as Panel, label: "Send"     },
 ];
 
-// Configuration for particles surrounding the active option node
-const PARTICLE_OFFSETS = [
-  { top: '-8%', left: '20%', size: 'w-2 h-2', delay: '0s', opacity: 'opacity-80' },
-  { top: '4%', left: '76%', size: 'w-1.5 h-1.5', delay: '0.2s', opacity: 'opacity-60' },
-  { top: '-14%', left: '52%', size: 'w-1 h-1', delay: '0.4s', opacity: 'opacity-40' },
-  { top: '22%', left: '-10%', size: 'w-1.5 h-1.5', delay: '0.1s', opacity: 'opacity-50' },
-  { top: '80%', left: '85%', size: 'w-1 h-1', delay: '0.3s', opacity: 'opacity-30' },
+// Scattered background particles pre-distributed all around the 360-degree perimeter
+const GLOBAL_PARTICLES = [
+  { angle: -15,  radius: 46, size: 'w-1.5 h-1.5', delay: '0.1s' },
+  { angle: -35,  radius: 54, size: 'w-1 h-1',     delay: '0.5s' },
+  { angle: -85,  radius: 44, size: 'w-2 h-2',     delay: '0.3s' },
+  { angle: -110, radius: 52, size: 'w-1 h-1',     delay: '0.7s' },
+  { angle: -155, radius: 46, size: 'w-1.5 h-1.5', delay: '0s'   },
+  { angle: -180, radius: 55, size: 'w-1 h-1',     delay: '0.4s' },
+  { angle: -225, radius: 45, size: 'w-2 h-2',     delay: '0.2s' },
+  { angle: -250, radius: 53, size: 'w-1 h-1',     delay: '0.8s' },
+  { angle: -295, radius: 47, size: 'w-1.5 h-1.5', delay: '0.6s' },
+  { angle: -330, radius: 54, size: 'w-1 h-1',     delay: '0.9s' },
 ];
 
 function getClosestSlot(currentRotation: number) {
@@ -113,8 +118,8 @@ export default function Wheel({ activeTab, panel, setActiveTab, setPanel }: Whee
 
   return (
     <section className="relative flex flex-col items-center justify-center select-none w-full my-6">
-
-      {/* Ambient dynamic glow mirroring current status color */}
+      
+      {/* Dynamic Background Radial Glow */}
       <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-80 h-80 rounded-full bg-linear-to-br from-orange-200/20 via-cyan-200/10 to-transparent blur-2xl pointer-events-none" />
       
       {/* Structural Track Ring Boundary */}
@@ -124,16 +129,48 @@ export default function Wheel({ activeTab, panel, setActiveTab, setPanel }: Whee
         onPointerMove={handlePointerMove}
         onPointerUp={handlePointerUp}
         onPointerCancel={handlePointerUp}
-        className={`relative w-72 h-72 rounded-full border border-amber-100/70 bg-transparent flex items-center justify-center transition-colors duration-200 ${
+        className={`relative w-72 h-72 rounded-full border border-amber-100/60 bg-transparent flex items-center justify-center transition-colors duration-200 ${
           isDragging ? 'cursor-grabbing border-cyan-300 bg-cyan-50/5' : 'cursor-grab'
         }`}
         style={{ touchAction: 'none' }}
       >
-        {/* Rotatable Node Wheel Structural Frame[cite: 1] */}
+        {/* Rotatable Outer Node & Particle Frame */}
         <div
           className="absolute inset-0 rounded-full"
           style={{ transform: `rotate(${currentRotation}deg)`, transition: transitionStyle }}
         >
+          {/* Scattered Orbiting Particles */}
+          {GLOBAL_PARTICLES.map((p, pIndex) => {
+            // Convert coordinate physics relative to wheel center
+            const pRad = ((p.angle - 90) * Math.PI) / 180;
+            const px = 50 + p.radius * Math.cos(pRad);
+            const py = 50 + p.radius * Math.sin(pRad);
+
+            // Dynamically calculate if particle falls near the current action node's angle
+            // targetSlot.angle represents the top anchor, so we track relative distance
+            const relativeAngle = ((p.angle + currentRotation) % 360 + 360) % 360;
+            const isNearActiveNode = relativeAngle < 35 || relativeAngle > 325;
+
+            return (
+              <div
+                key={`global-p-${pIndex}`}
+                className={`absolute rounded-full transition-all duration-500 pointer-events-none ${p.size} ${
+                  isNearActiveNode 
+                    ? 'bg-cyan-400 shadow-[0_0_6px_#22d3ee] scale-125 opacity-90' 
+                    : 'bg-orange-400/50 opacity-40 shadow-[0_0_3px_rgba(255,159,28,0.2)]'
+                }`}
+                style={{
+                  left: `${px}%`,
+                  top: `${py}%`,
+                  transform: 'translate(-50%, -50%)',
+                  animation: 'pulse 2s infinite ease-in-out',
+                  animationDelay: p.delay,
+                }}
+              />
+            );
+          })}
+
+          {/* Action Slots */}
           {SLOTS.map((slot, i) => {
             const angleDeg = (i * 72) - 90; 
             const angleRad = (angleDeg * Math.PI) / 180;
@@ -161,31 +198,7 @@ export default function Wheel({ activeTab, panel, setActiveTab, setPanel }: Whee
                   transform: 'translate(-50%, -50%)',
                 }}
               >
-                {/* Dynamically Tracked Particle Cluster - Only renders around active element */}
-                {isActive && (
-                  <div 
-                    className="absolute inset-0 pointer-events-none"
-                    style={{
-                      transform: `rotate(${-currentRotation}deg)`,
-                      transition: isDragging ? 'none' : 'transform 0.6s cubic-bezier(0.25, 1, 0.5, 1)',
-                    }}
-                  >
-                    {PARTICLE_OFFSETS.map((p, pIndex) => (
-                      <div
-                        key={pIndex}
-                        className={`absolute rounded-full bg-cyan-400/80 shadow-xs shadow-cyan-300 ${p.size} ${p.opacity} animate-pulse`}
-                        style={{
-                          top: p.top,
-                          left: p.left,
-                          animationDelay: p.delay,
-                          animationDuration: '2s'
-                        }}
-                      />
-                    ))}
-                  </div>
-                )}
-
-                {/* Multitone Action Button Circle */}
+                {/* Action Button Circle */}
                 <button
                   type="button"
                   onPointerDown={(e) => handleIconTap(e, slot)}
@@ -202,7 +215,7 @@ export default function Wheel({ activeTab, panel, setActiveTab, setPanel }: Whee
                   {icons[slot.panel ?? '']}
                 </button>
                 
-                {/* Light Counter-Rotated Context Labels */}
+                {/* Counter-Rotated Context Label */}
                 <div 
                   className="w-24 text-center mt-2 pointer-events-none flex justify-center"
                   style={{
@@ -234,10 +247,10 @@ export default function Wheel({ activeTab, panel, setActiveTab, setPanel }: Whee
               transition: isDragging ? 'none' : 'transform 0.6s cubic-bezier(0.25, 1, 0.5, 1)'
             }}
           >
-            <div className="absolute top-0 left-1/2 -translate-x-1/2 w-2 h-2 rounded-full bg-linear-to-br from-[#FF9F1C] to-cyan-400 shadow-xs shadow-cyan-300/80" />
+            <div className="absolute top-0 left-1/2 -translate-x-1/2 w-2 h-2 rounded-full bg-[#FF9F1C]" />
           </div>
 
-          {/* Decorative Inner Shield Contained Gradient Cover[cite: 1] */}
+          {/* Decorative Inner Shield[cite: 1] */}
           <div className="w-26 h-26 rounded-full border-4 border-amber-50/30 bg-linear-to-b from-white to-amber-50/20 flex items-center justify-center shadow-inner">
             <div className="w-9 h-9 text-[#FF9F1C] flex items-center justify-center filter drop-shadow-[0_2px_4px_rgba(255,159,28,0.12)]">
               <ShieldEmblemIcon className="w-full h-full" />
