@@ -158,6 +158,48 @@ impl VaultContract {
 
     /// Owner-only. A vault can only be closed once its balance has been fully
     /// withdrawn — this just marks the vault inactive, it never seizes funds.
+    /// Business rule (unanimous member approval) is enforced by
+    /// the app backend before the owner is allowed to submit this call —
+    /// the contract itself only checks ownership, same pattern as close_vault.
+    
+    pub fn update_goal(env: Env, caller: Address, vault_id: u64, new_goal_amount: i128) -> Result<(), Error> {
+        caller.require_auth();
+        let mut vault = Self::load_vault(&env, vault_id)?;
+        crate::permissions::require_owner(&env, vault_id, &caller)?;
+
+        if new_goal_amount <= 0 {
+            return Err(Error::InvalidGoal);
+        }
+
+        vault.goal_amount = new_goal_amount;
+        if vault.balance >= vault.goal_amount {
+            vault.status = VaultStatus::GoalReached;
+        } else if vault.status == VaultStatus::GoalReached {
+            vault.status = VaultStatus::Active;
+        }
+        Self::save_vault(&env, &vault);
+
+        env.events()
+            .publish((Symbol::new(&env, "goal_updated"), caller), (vault_id, new_goal_amount));
+
+        Ok(())
+    }
+
+    /// Owner-only, same approval-before-call pattern as update_goal.
+    pub fn update_lock(env: Env, caller: Address, vault_id: u64, new_lock_until: u64) -> Result<(), Error> {
+        caller.require_auth();
+        let mut vault = Self::load_vault(&env, vault_id)?;
+        crate::permissions::require_owner(&env, vault_id, &caller)?;
+
+        vault.lock_until = new_lock_until;
+        Self::save_vault(&env, &vault);
+
+        env.events()
+            .publish((Symbol::new(&env, "lock_updated"), caller), (vault_id, new_lock_until));
+
+        Ok(())
+    }
+
     pub fn close_vault(env: Env, caller: Address, vault_id: u64) -> Result<(), Error> {
         caller.require_auth();
         let mut vault = Self::load_vault(&env, vault_id)?;
