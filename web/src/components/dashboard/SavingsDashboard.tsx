@@ -524,7 +524,7 @@ return (
 
       {activeTab === 'home' && (
         <>
-          <div className="mx-4 mt-5 p-6 rounded-3xl bg-linear-to-br from-[#FFB238] via-[#FF9F1C] to-[#F37A00] text-white shadow-[0_18px_38px_-14px_rgba(227,122,0,0.55)] relative overflow-hidden">
+          <div className="mx-6 mt-6 p-6 rounded-3xl bg-linear-to-br from-[#FFB238] via-[#FF9F1C] to-[#F37A00] text-white shadow-[0_18px_30px_-14px_rgba(230,80,0,0.40)] relative overflow-hidden">
             {/* Dashed orbit + safe-door glyph, echoing the dial motif */}
             <div className="absolute -right-6 top-1/2 -translate-y-1/2 w-32 h-32 rounded-full border border-dashed border-white/25 pointer-events-none" />
             <div className="absolute right-3 top-1/2 -translate-y-1/2 w-20 h-20 rounded-2xl bg-white/10 backdrop-blur-[1px] pointer-events-none flex items-center justify-center">
@@ -535,7 +535,7 @@ return (
             <div className="absolute right-24 top-6 w-1.5 h-1.5 bg-white/50 rounded-full pointer-events-none" />
             <div className="absolute right-28 top-11 w-1 h-1 bg-white/40 rounded-full pointer-events-none" />
 
-            <div className="space-y-1.5 relative z-10">
+            <div className="space-y-2 relative z-10">
               <div className="flex items-center justify-between">
                 <span className="text-[11px] tracking-[0.14em] uppercase font-semibold text-white/80">Total Balance</span>
                 <button
@@ -567,23 +567,23 @@ return (
           </div>
           
           {/* Quick-glance insight strip */}
-          <div className="mx-4 mt-3 grid grid-cols-3 gap-2.5">
-            <div className="rounded-2xl bg-white border border-slate-100 p-3">
+          <div className="mx-6 mt-9 grid grid-cols-3 gap-3">
+            <div className="rounded-2xl bg-white border border-slate-100 p-3.5">
               <p className="text-[10px] font-semibold tracking-wide text-slate-400 uppercase">This month</p>
-              <p className="text-base font-semibold text-[#E3790A] mt-0.5">+₱1,240</p>
+              <p className="text-base font-semibold text-[#E3790A] mt-1">+₱1,240</p>
             </div>
-            <div className="rounded-2xl bg-white border border-slate-100 p-3">
+            <div className="rounded-2xl bg-white border border-slate-100 p-3.5">
               <p className="text-[10px] font-semibold tracking-wide text-slate-400 uppercase">Vaults</p>
-              <p className="text-base font-semibold text-slate-800 mt-0.5">{vaultsCount || 0}</p>
+              <p className="text-base font-semibold text-slate-800 mt-1">{vaultsCount || 0}</p>
             </div>
-            <div className="rounded-2xl bg-white border border-slate-100 p-3">
+            <div className="rounded-2xl bg-white border border-slate-100 p-3.5">
               <p className="text-[10px] font-semibold tracking-wide text-slate-400 uppercase">Streak</p>
-              <p className="text-base font-semibold text-slate-800 mt-0.5">12 days</p>
+              <p className="text-base font-semibold text-slate-800 mt-1">12 days</p>
             </div>
           </div>
 
           {/* Spinning Dial Core Wrapper */}
-          <div className="my-22">
+          <div className="mt-17 mb-5">
             <Wheel 
               activeTab={activeTab} 
               panel={panel} 
