@@ -528,12 +528,12 @@ return (
           <div className="mx-6 mt-6 p-6 rounded-3xl bg-linear-to-br from-[#FFB238] via-[#FF9F1C] to-[#F37A00] text-white shadow-[0_18px_30px_-14px_rgba(230,80,0,0.40)] relative overflow-hidden">
             {/* Safe icon artwork, echoing the vault/dial motif */}
             <Image
-              src="/safe-icon.png"
+              src="/safeIcon.png"
               alt=""
               aria-hidden="true"
               width={176}
               height={176}
-              className="absolute -right-6 top-1/2 -translate-y-1/2 w-55 h-55 object-contain pointer-events-none select-none"
+              className="absolute right-6 top-1/2 -translate-y-1/2 w-40 h-40 object-contain pointer-events-none select-none"
             />
 
             <div className="space-y-2 relative z-10">
@@ -561,8 +561,6 @@ return (
 
               <span className="text-xs font-medium tracking-wide text-white/80 flex items-center gap-1.5 pt-1">
                 {showBalance ? `≈ ${walletUsdcBalance.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} USDC` : '•••••• USDC'}
-                <span className="w-1 h-1 rounded-full bg-white/40" />
-                <span className="text-white/60">updated just now</span>
               </span>
             </div>
           </div>
