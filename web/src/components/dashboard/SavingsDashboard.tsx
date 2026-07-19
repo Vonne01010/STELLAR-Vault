@@ -573,6 +573,16 @@ return (
               </div>
             </div>
           </div>
+          
+          {/* Spinning Dial Core Wrapper */}
+          <div className="my-17">
+            <Wheel 
+              activeTab={activeTab} 
+              panel={panel} 
+              setActiveTab={(tab) => setActiveTab(tab as Tab)} 
+              setPanel={setPanel} 
+            />
+          </div>
 
           {/* Quick-glance insight strip */}
           <div className="mx-4 mt-3 grid grid-cols-3 gap-2.5">
@@ -589,16 +599,6 @@ return (
               <p className="text-base font-semibold text-slate-800 mt-0.5">12 days</p>
             </div>
           </div>
-
-            {/* Spinning Dial Core Wrapper */}
-            <div className="my-17">
-              <Wheel 
-                activeTab={activeTab} 
-                panel={panel} 
-                setActiveTab={(tab) => setActiveTab(tab as Tab)} 
-                setPanel={setPanel} 
-              />
-            </div>
 
             {/* Slide Inline Configuration Panels */}
             {panel && (

@@ -113,10 +113,34 @@ export default function Wheel({ activeTab, panel, setActiveTab, setPanel }: Whee
         onPointerUp={handlePointerUp}
         onPointerCancel={handlePointerUp}
         className={`relative w-72 h-72 rounded-full border border-dashed border-amber-200/70 bg-transparent flex items-center justify-center transition-colors duration-200 ${
-          isDragging ? 'cursor-grabbing border-cyan-200 bg-amber-50/10' : 'cursor-grab'
+          isDragging ? 'cursor-grabbing border-[#FF9F1C]/60 bg-amber-50/10' : 'cursor-grab'
         }`}
         style={{ touchAction: 'none' }}
       >
+        {/* Engraved tick marks — turns the dashed boundary into a real dial face */}
+        <svg className="absolute inset-0 w-full h-full pointer-events-none" viewBox="0 0 100 100">
+          {Array.from({ length: 60 }).map((_, i) => {
+            const isMajor = i % 5 === 0;
+            const deg = i * 6;
+            const rad = (deg * Math.PI) / 180;
+            const rOuter = 49.5;
+            const rInner = isMajor ? 46.3 : 47.6;
+            const x1 = 50 + rOuter * Math.sin(rad);
+            const y1 = 50 - rOuter * Math.cos(rad);
+            const x2 = 50 + rInner * Math.sin(rad);
+            const y2 = 50 - rInner * Math.cos(rad);
+            return (
+              <line
+                key={i}
+                x1={x1} y1={y1} x2={x2} y2={y2}
+                stroke={isMajor ? '#F0A93B' : '#F3D9A8'}
+                strokeWidth={isMajor ? 0.7 : 0.4}
+                strokeLinecap="round"
+              />
+            );
+          })}
+        </svg>
+
         {/* Rotatable Node Wheel Structural Frame */}
         <div
           className="absolute inset-0 rounded-full"
@@ -155,7 +179,7 @@ export default function Wheel({ activeTab, panel, setActiveTab, setPanel }: Whee
                   onPointerDown={(e) => handleIconTap(e, slot)}
                   className={`pointer-events-auto flex items-center justify-center rounded-full w-12 h-12 shadow-sm border transition-all duration-150 outline-none active:scale-90 hover:scale-105 ${
                     isActive 
-                      ? 'bg-linear-to-b from-white to-cyan-50/40 border-cyan-200 text-cyan-600 shadow-cyan-100/50' 
+                      ? 'bg-linear-to-b from-white to-orange-50 border-[#FF9F1C] text-[#E3790A] shadow-orange-200/60 ring-2 ring-orange-100' 
                       : 'bg-linear-to-b from-white to-amber-50/20 border-amber-100/70 text-[#FF9F1C] hover:border-orange-200'
                   }`}
                   style={{
@@ -176,7 +200,7 @@ export default function Wheel({ activeTab, panel, setActiveTab, setPanel }: Whee
                 >
                   <span className={`text-[10px] tracking-wider block px-2 py-0.5 rounded-md transition-all duration-300 uppercase ${
                     isActive 
-                      ? 'text-cyan-700 bg-cyan-50/80 font-bold font-mono border border-cyan-100/50' 
+                      ? 'text-[#B4650B] bg-orange-50/90 font-bold border border-orange-100' 
                       : 'text-slate-500 font-medium'
                   }`}>
                     {slot.label}
@@ -188,7 +212,7 @@ export default function Wheel({ activeTab, panel, setActiveTab, setPanel }: Whee
         </div>
 
         {/* Central Stationary Cream Core Dial Hub */}
-        <div className="w-32 h-32 rounded-full bg-white flex items-center justify-center z-20 shadow-xs shadow-amber-900/5 relative pointer-events-none">
+        <div className="w-32 h-32 rounded-full bg-white flex items-center justify-center z-20 shadow-[inset_0_2px_10px_rgba(255,159,28,0.08),0_10px_24px_-10px_rgba(180,101,11,0.35)] relative pointer-events-none">
           
           {/* Active Rotational Tracking Indicator Yellow/Orange Notch */}
           <div 
@@ -210,6 +234,14 @@ export default function Wheel({ activeTab, panel, setActiveTab, setPanel }: Whee
           </div>
         </div>
 
+      </div>
+
+      {/* Supporting headline — echoes the dial's craftsmanship framing */}
+      <div className="mt-5 text-center px-6">
+        <p className="text-[15px] font-semibold text-slate-800 leading-snug">
+          Secure. Simple. <span className="text-[#E3790A]">Built for us.</span>
+        </p>
+        <div className="mx-auto mt-2 w-6 h-[3px] rounded-full bg-[#FF9F1C]" />
       </div>
     </section>
   );
