@@ -1,5 +1,6 @@
 generator client {
-  provider = "prisma-client-js"
+  provider        = "prisma-client-js"
+  previewFeatures = ["driverAdapters"]
 }
 
 datasource db {
@@ -14,12 +15,39 @@ model User {
   createdAt DateTime @default(now())
   deletedAt DateTime?
 
+  points Int @default(0)
+
+  verificationLevel Int     @default(1)
+  phone             String? @unique
+  phoneVerified     Boolean @default(false)
+  email             String?
+  country           String?
+  tosAccepted       Boolean @default(false)
+
+  alternativeIdType      String?
+  alternativeIdNumber    String?
+  alternativeIdImageUrl  String?
+  alternativeIdVerified  Boolean @default(false)
+
+  endorsementCode      String?
+  selfieVerified       Boolean @default(false)
+  governmentIdVerified Boolean @default(false)
+  kycPartner           String?
+
+  verificationReviews VerificationReview[]
+
   vaults      Vault[]
   invitations Invitation[]
   logs        ActivityLog[]
   memberships VaultMember[]
   sentTransfers     PendingTransfer[] @relation("SentTransfers")
   receivedTransfers PendingTransfer[] @relation("ReceivedTransfers")
+
+  trustScore                Int @default(0)
+  savingsGoalsCompleted     Int @default(0)
+  onTimeDeposits            Int @default(0)
+  collaborativeVaultsCount  Int @default(0)
+  disputesCount             Int @default(0)
 }
 
 model Vault {
@@ -42,15 +70,40 @@ model Vault {
   invitations Invitation[]
   logs        ActivityLog[]
   members     VaultMember[]
+  proposals VaultProposal []
 
   @@unique([contractAddress, onChainVaultId])
+}
+
+model VaultProposal {
+  id         String   @id @default(cuid())
+  vaultId    String
+  proposedBy String
+  type       String   // "edit_goal" | "edit_lock" | "delete"
+  changes    Json?    // { targetAmount? } for edit_goal | { lockUntil? } for edit_lock | null for delete
+  status     String   @default("pending") // pending | approved | rejected | executed
+  createdAt  DateTime @default(now())
+
+  vault     Vault                   @relation(fields: [vaultId], references: [id])
+  approvals VaultProposalApproval[]
+}
+
+model VaultProposalApproval {
+  id         String   @id @default(cuid())
+  proposalId String
+  pubkey     String
+  createdAt  DateTime @default(now())
+
+  proposal VaultProposal @relation(fields: [proposalId], references: [id])
+
+  @@unique([proposalId, pubkey])
 }
 
 model VaultMember {
   id        String   @id @default(cuid())
   vaultId   String
   pubkey    String
-  role      String   @default("Contributor") // "Owner" | "Contributor" — mirrors contract's Role enum
+  role      String   @default("Contributor")
   addedAt   DateTime @default(now())
 
   vault Vault @relation(fields: [vaultId], references: [id])
@@ -105,9 +158,21 @@ model PendingTransfer {
   amount            Float
   senderAuthorized  Boolean  @default(false)
   receiverAuthorized Boolean @default(false)
-  status            String   @default("awaiting_authorization") // "awaiting_authorization" | "ready_to_submit" | "submitted"
+  status            String   @default("awaiting_authorization")
   createdAt         DateTime @default(now())
 
   sender    User @relation("SentTransfers", fields: [senderPubkey], references: [pubkey])
   recipient User @relation("ReceivedTransfers", fields: [recipientPubkey], references: [pubkey])
+}
+
+model VerificationReview {
+  id         String   @id @default(cuid())
+  userId     String
+  level      Int
+  decision   String
+  reason     String?
+  reviewedBy String?
+  createdAt  DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id])
 }
