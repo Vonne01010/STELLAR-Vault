@@ -121,7 +121,7 @@ export async function POST(request: Request) {
     await createNotification({
       pubkey: ownerPubkey,
       vaultId: vault.id,
-      message: `Collaborative vault "${vault.name}" created successfully.`,
+      message: `${vault.vaultType === 'Collaborative' ? 'Collaborative' : 'Personal'} vault "${vault.name}" created successfully.`,
       variant: "success",
       meta: {
         event: "vault_created",

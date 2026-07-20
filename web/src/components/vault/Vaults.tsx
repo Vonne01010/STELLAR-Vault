@@ -834,8 +834,6 @@ export default function Vaults({
       setSubTab(inOwned ? 'owned' : 'joined');
     }, 0);
 
-    const timeout = setTimeout(() => {
-    // Wait a tick for the tab switch to render the target card before scrolling.
     const timeout = window.setTimeout(() => {
       const el = cardRefs.current.get(focusVaultId);
       el?.scrollIntoView({ behavior: 'smooth', block: 'center' });
