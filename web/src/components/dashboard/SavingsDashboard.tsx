@@ -236,19 +236,19 @@ export default function SavingsDashboard({ publicKey, wallet, onLogout, headerAc
   useEffect(() => {
     if (!publicKey) return;
     authFetch('/api/users/me')
-    .then((r) => r.json())
-    .then((d) => {
-    setProfile(d.profile ?? null);
-    setTrust(d.trust ?? null);
-    setPoints(d.points ?? 0);
-    setVaultsCount(d.vaultsCount ?? 0);
-    })
-    .catch(() => {
-    setProfile(null);
-    setTrust(null);
-    setPoints(0);
-    setVaultsCount(0);
-    });
+      .then((r) => r.json())
+      .then((d) => {
+        setProfile(d.profile ?? null);
+        setTrust(d.trust ?? null);
+        setPoints(d.points ?? 0);
+        setVaultsCount(d.vaultsCount ?? 0);
+      })
+      .catch(() => {
+        setProfile(null);
+        setTrust(null);
+        setPoints(0);
+        setVaultsCount(0);
+      });
   }, [publicKey]);
 
   useEffect(() => {
@@ -693,11 +693,10 @@ return (
               loading={loading}
               onRefresh={refresh}
               onOpenSettings={() => router.push('/settings')}
-              {...(username !== undefined && { username })}
-              {...(avatarSrc !== undefined && { avatarSrc })}
               points={points}
               vaultsCount={vaultsCount}
-              username={profile?.displayName ?? undefined}
+              username={profile?.displayName ?? username}
+              avatarSrc={profile?.profilePicture ?? avatarSrc}
               phoneVerified={profile?.phoneVerified}
               phoneNumber={profile?.phoneNumber ?? undefined}
               identityVerified={profile?.alternativeIdVerified}
