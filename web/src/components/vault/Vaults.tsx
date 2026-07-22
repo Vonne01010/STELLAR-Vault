@@ -183,6 +183,19 @@ function VaultCard({
       }).catch(() => undefined);
       const hash = await submitSignedXDR(signedXdr);
       await pollTransaction(hash);
+
+      const eventRes = await authFetch(`/api/vaults/${vault.id}/events`,{
+        method: 'POST',
+        body: JSON.stringify({
+          eventType: 'distribution_completed',
+          totalAmount: vault.balance,
+        }),
+      });
+      const eventData = await eventRes.json().catch(() => null);
+      if (!eventRes.ok) {
+        throw new Error(eventData?.error ?? 'Vault balance sync failed after distribution');
+      }
+      
       await createAppNotification({
         message: 'Distribution transaction confirmed on-chain.',
         vaultId: vault.id,
