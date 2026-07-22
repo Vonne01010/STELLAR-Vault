@@ -143,7 +143,7 @@ function VaultCard({
     setError('');
     try {
       const fn = action === 'deposit' ? depositUSDC : withdrawUSDC;
-      await fn(amount, vault.onChainVaultId, {
+      await fn(amount, vault.onChainVaultId, vault.id, {
         onCompleted: async () => {
           onChanged();
         },
