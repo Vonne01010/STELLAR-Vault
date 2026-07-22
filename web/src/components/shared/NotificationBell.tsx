@@ -50,9 +50,11 @@ function variantClasses(variant: AppNotificationVariant): string {
 export default function NotificationBell({
   publicKey,
   onNavigateToVault,
+  onNavigateToTransfer,
 }: {
   publicKey: string | null;
   onNavigateToVault?: (vaultId: string) => void;
+  onNavigateToTransfer?: (transferId: string) => void;
 }) {
   const [open, setOpen] = useState(false);
   const [notifications, setNotifications] = useState<AppNotification[]>([]);
@@ -124,6 +126,12 @@ export default function NotificationBell({
     }
     if (n.vaultId && onNavigateToVault) {
       onNavigateToVault(n.vaultId);
+      setOpen(false);
+      return;
+    }
+    const transferId = (n.meta as { transferId?: string } | undefined)?.transferId;
+    if (transferId && onNavigateToTransfer) {
+      onNavigateToTransfer(transferId);
       setOpen(false);
     }
   };

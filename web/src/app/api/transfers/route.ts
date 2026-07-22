@@ -37,27 +37,27 @@ export async function POST(request: Request) {
       },
     })
 
-+   // Notify the recipient directly — POST /api/notifications can only
-+   // notify the caller (pubkey is derived from auth there), so for a
-+   // cross-user notification like this we write to prisma.notification here.
-+   await prisma.notification.create({
-+     data: {
-+       pubkey: recipientPubkey,
-+       message: `New transfer request: ${amount} USDC awaiting your approval.`,
-+       vaultId: null,
-+       variant: "action_required",
-+       meta: {
-+         event: "transfer_requested",
-+         transferId: transfer.id,
-+         senderPubkey: auth.pubkey,
-+         timestamp: new Date().toISOString(),
-+       },
-+     },
-+   }).catch((err) => {
-+     // Don't fail the transfer creation if the notification insert fails —
-+     // the transfer itself already succeeded and is the important part.
-+     console.error("Failed to create recipient notification for transfer:", err)
-+   })
+    // Notify the recipient directly — POST /api/notifications can only
+    // notify the caller (pubkey is derived from auth there), so for a
+    // cross-user notification like this we write to prisma.notification here.
+    await prisma.notification.create({
+      data: {
+        pubkey: recipientPubkey,
+        message: `New transfer request: ${amount} USDC awaiting your approval.`,
+        vaultId: null,
+        variant: "action_required",
+        meta: {
+          event: "transfer_requested",
+          transferId: transfer.id,
+          senderPubkey: auth.pubkey,
+          timestamp: new Date().toISOString(),
+        },
+      },
+    }).catch((err) => {
+      // Don't fail the transfer creation if the notification insert fails —
+      // the transfer itself already succeeded and is the important part.
+      console.error("Failed to create recipient notification for transfer:", err)
+    })
 
     return Response.json(transfer)
   } catch (error) {
