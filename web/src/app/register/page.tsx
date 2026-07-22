@@ -346,18 +346,18 @@ export default function RegisterPage() {
 
               {/* Grid Number Input Pad Layout */}
               <div className="grid grid-cols-3 gap-x-4 gap-y-3 px-2">
-                {['1', '2', '3', '4', '5', '6', '7', '8', '9', '', '0', 'X'].map((key, idx) => (
+                {['1', '2', '3', '4', '5', '6', '7', '8', '9', '', '0', '⌫'].map((key, idx) => (
                   <button
                     key={idx}
                     onClick={() => {
-                      if (key === 'âŒ«') handleOtpBackspace();
+                      if (key === '⌫') handleOtpBackspace();
                       else if (key !== '') handleOtpDigit(key);
                     }}
                     disabled={key === '' || otpLoading}
                     className={`h-11 rounded-xl text-base font-medium flex items-center justify-center transition-all ${
                       key === ''
                         ? 'opacity-0 pointer-events-none'
-                        : key === 'âŒ«'
+                        : key === '⌫'
                         ? 'text-slate-400 active:scale-95'
                         : 'bg-white border border-amber-100/30 text-slate-600 active:scale-95'
                     }`}
