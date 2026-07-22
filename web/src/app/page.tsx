@@ -51,7 +51,7 @@ export default function Home() {
       .then((balances) => {
         if (ignore) return;
         setFunded(balances ? ('funded' in balances ? !!balances.funded : true) : false);
-        setLinked(!!balances && 'usdc' in balances);
+        setLinked(!!balances && balances.hasUsdcTrustline);
       })
       .catch(() => {
         if (ignore) return;

@@ -41,7 +41,7 @@ export default function AddTrustline({
   const checkLinked = useCallback(async () => {
     try {
       const balances = await fetchBalances(publicKey);
-      setLinked(!!balances && 'usdc' in balances);
+      setLinked(!!balances && balances.hasUsdcTrustline);
     } catch {
       // leave last-known state as-is on a failed check
     }
