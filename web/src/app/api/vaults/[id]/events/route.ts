@@ -137,7 +137,7 @@ async function handleDeposit(vault: Vault, body: Record<string, unknown>, report
 
   const progress = Math.min(100, Number(((newBalance / vault.targetAmount) * 100).toFixed(2)))
   const timestamp = new Date().toISOString()
-  const formattedAmount = Number(amount).toFixed(7)
+  const formattedAmount = Number(amount).toFixed(2)
   const formattedBalance = Number(newBalance).toFixed(2)
   const formattedProgress = `${progress.toFixed(0)}%`
 
