@@ -945,14 +945,15 @@ export default function Vaults({
             className="p-2 rounded-full hover:bg-slate-100 transition-colors disabled:opacity-50 cursor-pointer"
             aria-label="Sync Data"
           >
-            <RefreshIcon 
-              className={`w-5 h-5 transition-colors ${
-                isLoading 
-                  ? 'text-cyan-500 animate-spin' 
-                  : error 
+            <RefreshIcon
+              className={
+                'w-5 h-5 transition-colors ' +
+                (isLoading
+                  ? 'text-cyan-500 animate-spin'
+                  : error
                   ? 'text-orange-500'
-                  : 'text-gray-400'
-              }`} 
+                  : 'text-gray-400')
+              }
             />
           </button>
         </div>
