@@ -131,7 +131,7 @@ export default function SavingsDashboard({ publicKey, wallet, onLogout, headerAc
   const [unlocking, setUnlocking] = useState(false);
   const [pendingRetry, setPendingRetry] = useState<(() => Promise<void>) | null>(null);
   
-  const [pendingApproval, setPendingApproval] = useState<PendingTransferApproval | null>(null);
+  const [pendingApprovals, setPendingApprovals] = useState<PendingTransferApproval[]>([]);
   const [pendingLoading, setPendingLoading] = useState(false);
 
   const safeNumber = (v: unknown): number => {
@@ -171,11 +171,11 @@ export default function SavingsDashboard({ publicKey, wallet, onLogout, headerAc
   }, []);
 
   const refreshPendingApproval = useCallback(async () => {
-    if (!publicKey) { setPendingApproval(null); return; }
+    if (!publicKey) { setPendingApprovals([]); return; }
     setPendingLoading(true);
     try {
       const transfers = await getPendingTransferApprovalsForAddress();
-      setPendingApproval(transfers[0] ?? null);
+      setPendingApprovals(transfers);
     } catch (e: unknown) {
       showToast(e instanceof Error ? e.message : 'Failed to load transfer requests', 'error');
     } finally {
@@ -335,6 +335,8 @@ export default function SavingsDashboard({ publicKey, wallet, onLogout, headerAc
       await createPendingTransferApproval(recipient, Number(transferAmount));
       showToast('Transfer request created. The receiver must approve it before it can be sent.', 'success');
       await refreshPendingApproval();
+      setRecipient('');
+      setTransferAmount('');
     } catch (e: unknown) {
       showToast(e instanceof Error ? e.message : 'Failed to create transfer request', 'error');
     } finally {
@@ -342,75 +344,72 @@ export default function SavingsDashboard({ publicKey, wallet, onLogout, headerAc
     }
   };
 
-  const handleApproveAsSender = async () => {
-    if (!pendingApproval) return;
-    setBusy(true);
-    try {
-      await runWithReauth(async () => {
-        await updatePendingTransferApproval(pendingApproval.id);
-        await refreshPendingApproval();
-        showToast('Approved. Waiting on the other party.', 'success');
-      });
-    } catch (e: unknown) {
-      showToast(e instanceof Error ? e.message : 'Failed to approve transfer', 'error');
-    } finally {
-      setBusy(false);
-    }
-  };
-
-  const handleApproveAsReceiver = async () => {
-    if (!pendingApproval) return;
-    setBusy(true);
-    try {
-      await runWithReauth(async () => {
-        await updatePendingTransferApproval(pendingApproval.id);
-        await refreshPendingApproval();
-        showToast('Approved. Waiting on the other party.', 'success');
-      });
-    } catch (e: unknown) {
-      showToast(e instanceof Error ? e.message : 'Failed to approve transfer', 'error');
-    } finally {
-      setBusy(false);
-    }
-  };
-
-  const handleSubmitApprovedTransfer = async () => {
-    if (!pendingApproval) return;
-    setBusy(true);
-    try {
-      await runWithReauth(async () => {
-        const result = await transferUSDC(pendingApproval.recipient, pendingApproval.amount);
-        await authFetch(`/api/transfers/${pendingApproval.id}/complete`, {
-          method: 'POST',
-          body: JSON.stringify({ hash: result.hash }),
-        });
-        await refresh();
-        await refreshHistory(publicKey);
-        await refreshPendingApproval();
-        showToast('Transfer sent successfully!', 'success');
-        setPanel(null);
-      });
-    } catch (e: unknown) {
-      showToast(e instanceof Error ? e.message : 'Failed to submit transfer', 'error');
-    } finally {
-      setBusy(false);
-      resetTransferState();
-    }
-  };
-
-  const handleVoidPendingApproval = async () => {
-    if (!pendingApproval) return;
-    setBusy(true);
-    try {
-      await removePendingTransferApproval(pendingApproval.id);
+  const handleApproveAsSender = async (id: string) => {
+  setBusy(true);
+  try {
+    await runWithReauth(async () => {
+      await updatePendingTransferApproval(id);
       await refreshPendingApproval();
-      showToast('Transfer request cancelled.', 'success');
-    } catch (e: unknown) {
-      showToast(e instanceof Error ? e.message : 'Failed to cancel transfer', 'error');
-    } finally {
-      setBusy(false);
-    }
-  };
+      showToast('Approved. Waiting on the other party.', 'success');
+    });
+  } catch (e: unknown) {
+    showToast(e instanceof Error ? e.message : 'Failed to approve transfer', 'error');
+  } finally {
+    setBusy(false);
+  }
+};
+
+const handleApproveAsReceiver = async (id: string) => {
+  setBusy(true);
+  try {
+    await runWithReauth(async () => {
+      await updatePendingTransferApproval(id);
+      await refreshPendingApproval();
+      showToast('Approved. Waiting on the other party.', 'success');
+    });
+  } catch (e: unknown) {
+    showToast(e instanceof Error ? e.message : 'Failed to approve transfer', 'error');
+  } finally {
+    setBusy(false);
+  }
+};
+
+const handleSubmitApprovedTransfer = async (id: string) => {
+  const approval = pendingApprovals.find((p) => p.id === id);
+  if (!approval) return;
+  setBusy(true);
+  try {
+    await runWithReauth(async () => {
+      const result = await transferUSDC(approval.recipient, approval.amount);
+      await authFetch(`/api/transfers/${id}/complete`, {
+        method: 'POST',
+        body: JSON.stringify({ hash: result.hash }),
+      });
+      await refresh();
+      await refreshHistory(publicKey);
+      await refreshPendingApproval();
+      showToast('Transfer sent successfully!', 'success');
+    });
+  } catch (e: unknown) {
+    showToast(e instanceof Error ? e.message : 'Failed to submit transfer', 'error');
+  } finally {
+    setBusy(false);
+    resetTransferState();
+  }
+};
+
+const handleVoidPendingApproval = async (id: string) => {
+  setBusy(true);
+  try {
+    await removePendingTransferApproval(id);
+    await refreshPendingApproval();
+    showToast('Transfer request cancelled.', 'success');
+  } catch (e: unknown) {
+    showToast(e instanceof Error ? e.message : 'Failed to cancel transfer', 'error');
+  } finally {
+    setBusy(false);
+  }
+};
   
   if (!configured) {
     return (
@@ -552,7 +551,7 @@ export default function SavingsDashboard({ publicKey, wallet, onLogout, headerAc
               {panel === 'send' && (
                 <SendPanel
                   publicKey={publicKey} sendMode={sendMode} onSendModeChange={setSendMode}
-                  pendingApproval={pendingApproval} recipient={recipient} onRecipientChange={setRecipient}
+                  pendingApprovals={pendingApprovals} recipient={recipient} onRecipientChange={setRecipient}
                   transferAmount={transferAmount} onTransferAmountChange={setTransferAmount}
                   busy={busy} onTransferRequest={handleTransferRequest}
                   onApproveAsSender={handleApproveAsSender} onApproveAsReceiver={handleApproveAsReceiver}
