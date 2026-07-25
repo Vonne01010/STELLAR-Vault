@@ -54,12 +54,29 @@ export async function POST(request: Request) {
         },
       },
     }).catch((err) => {
-      // Don't fail the transfer creation if the notification insert fails —
-      // the transfer itself already succeeded and is the important part.
       console.error("Failed to create recipient notification for transfer:", err)
     })
 
+    // NEW — notify the sender that their request was sent and is pending
+    await prisma.notification.create({
+      data: {
+        pubkey: auth.pubkey,
+        message: `Transfer request sent: ${amount} USDC, awaiting the recipient's approval.`,
+        vaultId: null,
+        variant: "info",
+        meta: {
+          event: "transfer_requested_sent",
+          transferId: transfer.id,
+          recipientPubkey,
+          timestamp: new Date().toISOString(),
+        },
+      },
+    }).catch((err) => {
+      console.error("Failed to create sender notification for transfer:", err)
+    })
+
     return Response.json(transfer)
+    
   } catch (error) {
     console.error("Failed to create pending transfer:", error)
     return Response.json({ error: "Failed to create transfer request" }, { status: 500 })
