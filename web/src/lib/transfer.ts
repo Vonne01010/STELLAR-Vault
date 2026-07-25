@@ -128,32 +128,7 @@ async function signXdr(xdr: string): Promise<string> {
 
 async function submitAndConfirm(signedXdr: string, operation: TransferOperation, vaultId?: string | number): Promise<string> {
   setState({ status: 'submitting', message: 'Broadcasting transaction…' });
-  await createAppNotification({
-    message: operation === 'deposit'
-      ? 'Deposit transaction submitted to the blockchain.'
-      : operation === 'withdraw'
-        ? 'Withdrawal transaction submitted to the blockchain.'
-        : 'Transfer transaction submitted to the blockchain.',
-    vaultId: vaultId !== undefined ? String(vaultId) : null,
-    variant: 'info',
-    meta: { event: 'transaction_submitted', operation, timestamp: new Date().toISOString() },
-  }).catch(() => undefined);
-
   const hash = await submitSignedXDR(signedXdr);
-  setState({ status: 'pending_confirmation', message: 'Waiting for confirmation…' });
-  await pollTransaction(hash);
-
-  await createAppNotification({
-    message: operation === 'deposit'
-      ? 'Deposit transaction confirmed on-chain.'
-      : operation === 'withdraw'
-        ? 'Withdrawal transaction confirmed on-chain.'
-        : 'Transfer transaction confirmed on-chain.',
-    vaultId: vaultId !== undefined ? String(vaultId) : null,
-    variant: 'success',
-    meta: { event: 'transaction_confirmed', operation, hash, timestamp: new Date().toISOString() },
-  }).catch(() => undefined);
-
   return hash;
 }
 

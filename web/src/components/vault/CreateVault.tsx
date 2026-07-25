@@ -60,21 +60,11 @@ export default function CreateVault({
       const signedXdr = await signWithCurrentAccount(xdr);
 
       setStatus('submitting');
-      await createAppNotification({
-        message: 'Vault creation transaction submitted to the blockchain.',
-        variant: 'info',
-        meta: { event: 'transaction_submitted', operation: 'create_vault', timestamp: new Date().toISOString() },
-      }).catch(() => undefined);
       const hash = await submitSignedXDR(signedXdr);
 
       setStatus('confirming');
       const onChainVaultId = await pollTransactionForResult(hash);
-      await createAppNotification({
-        message: 'Vault creation transaction confirmed on-chain.',
-        variant: 'success',
-        meta: { event: 'transaction_confirmed', operation: 'create_vault', hash, timestamp: new Date().toISOString() },
-      }).catch(() => undefined);
-      if (onChainVaultId === undefined || onChainVaultId === null) {
+       if (onChainVaultId === undefined || onChainVaultId === null) {
         throw new Error('Vault was created on-chain, but no vault ID was returned.');
       }
 
