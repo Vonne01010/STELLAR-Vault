@@ -11,13 +11,14 @@ export async function loadProfileByPubkey(pubkey: string): Promise<UserProfile |
     phoneNumber: user.phone ?? '',
     phoneVerified: user.phoneVerified,
     tosAccepted: user.tosAccepted,
-    email: user.email ?? undefined,
-    profilePicture: user.avatarUrl ?? undefined,
+    email: user.email ?? null,
+    profilePicture: user.avatarUrl ?? null,
+    referralCode: user.referralCode ?? '',
     alternativeIdType: user.alternativeIdType as UserProfile['alternativeIdType'],
     alternativeIdVerified: user.alternativeIdVerified,
     selfieVerified: user.selfieVerified,
     governmentIdVerified: user.governmentIdVerified,
-    kycPartner: user.kycPartner ?? undefined,
+    kycPartner: user.kycPartner ?? null,
     verificationLevel: user.verificationLevel as VerificationLevel,
     createdAt: user.createdAt.toISOString(),
   };
@@ -74,7 +75,6 @@ export async function submitLevel2Verification(
         endorsementCode: payload.endorsementCode ?? user.endorsementCode,
         email: payload.email ?? user.email,
         selfieVerified: payload.selfieCaptured ?? user.selfieVerified,
-        // Submission is pending review — level bump happens on approval, not here.
       },
     }),
     prisma.verificationReview.create({

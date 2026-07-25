@@ -109,6 +109,7 @@ export default function SavingsDashboard({ publicKey, wallet, onLogout, headerAc
   const [trust, setTrust] = useState<TrustScore | null>(null);
   const [points, setPoints] = useState<number>(0);
   const [vaultsCount, setVaultsCount] = useState<number>(0);
+  const [level2GateUnlocked, setLevel2GateUnlocked] = useState<boolean>(false);
   const [focusVaultId, setFocusVaultId] = useState<string | null>(null);
 
   // Form & Action states
@@ -189,6 +190,7 @@ export default function SavingsDashboard({ publicKey, wallet, onLogout, headerAc
       setTrust(d.trust ?? null);
       setPoints(d.points ?? 0);
       setVaultsCount(d.vaultsCount ?? 0);
+      setLevel2GateUnlocked(d.level2GateUnlocked ?? false);
     }).catch(() => {
       setProfile(null); setTrust(null); setPoints(0); setVaultsCount(0);
     });
@@ -475,6 +477,20 @@ export default function SavingsDashboard({ publicKey, wallet, onLogout, headerAc
               walletUsdcBalance={walletUsdcBalance}
               panel={panel}
               setPanel={setPanel}
+              // onRefresh={refresh}
+              // onOpenSettings={() => router.push('/settings')}
+              // points={points}
+              // vaultsCount={vaultsCount}
+              // username={profile?.displayName ?? username}
+              // avatarSrc={profile?.profilePicture ?? avatarSrc}
+              // phoneVerified={profile?.phoneVerified}
+              // phoneNumber={profile?.phoneNumber ?? undefined}
+              // identityVerified={(profile?.verificationLevel ?? 1) >= 2}
+              // communityTrustUnlocked={(profile?.verificationLevel ?? 1) >= 3}
+              // onVerifyIdentity={() => {
+              // authFetch('/api/users/me')
+              //   .then((r) => r.json())
+              //   .then((d) => setProfile(d.profile ?? null));
             />
           )}
 
@@ -571,7 +587,18 @@ export default function SavingsDashboard({ publicKey, wallet, onLogout, headerAc
                 onCopyAddress={handleCopyAddress} wallet={wallet} loading={loading} onRefresh={refresh}
                 onOpenSettings={() => router.push('/settings')} username={username ?? profile?.displayName ?? undefined} avatarSrc={avatarSrc}
                 points={points} vaultsCount={vaultsCount} phoneVerified={profile?.phoneVerified}
-                phoneNumber={profile?.phoneNumber ?? undefined} identityVerified={profile?.alternativeIdVerified}
+                phoneNumber={profile?.phoneNumber ?? undefined}
+                identityVerified={(profile?.verificationLevel ?? 1) >= 2}
+                communityTrustUnlocked={(profile?.verificationLevel ?? 1) >= 3}
+                level2GateUnlocked={level2GateUnlocked}
+                onVerifyIdentity={() => {
+                  authFetch('/api/users/me')
+                    .then((r) => r.json())
+                    .then((d) => {
+                      setProfile(d.profile ?? null);
+                      setLevel2GateUnlocked(d.level2GateUnlocked ?? false);
+                    });
+                }}
               />
             </div>
           )}
