@@ -234,10 +234,10 @@ async function runTransfer(
       kind: operation === 'deposit' ? 'deposit' : operation === 'withdraw' ? 'withdraw' : 'send',
       title: operation === 'deposit' ? 'Vault deposit' : operation === 'withdraw' ? 'Vault withdrawal' : 'USDC sent',
       description: operation === 'deposit'
-        ? `Saved ${normalizedAmount.toFixed(7)} USDC into the vault`
+        ? `Saved ${normalizedAmount.toFixed(2)} USDC into the vault`
         : operation === 'withdraw'
-          ? `Withdrew ${normalizedAmount.toFixed(7)} USDC from the vault`
-          : `${options.category ? `[${options.category}] ` : ''}Sent ${normalizedAmount.toFixed(7)} USDC to ${options.recipient ?? ''}`,
+          ? `Withdrew ${normalizedAmount.toFixed(2)} USDC from the vault`
+          : `${options.category ? `[${options.category}] ` : ''}Sent ${normalizedAmount.toFixed(2)} USDC to ${options.recipient ?? ''}`,
       amount: normalizedAmount,
       asset: 'USDC',
       counterparty: operation === 'transfer' ? options.recipient ?? '' : 'vault',
