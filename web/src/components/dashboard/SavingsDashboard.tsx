@@ -404,21 +404,12 @@ export default function SavingsDashboard({ publicKey, wallet, onLogout, headerAc
           {activeTab === 'home' && homeZone === 'vault' && (
             <VaultZone 
               loading={loading}
-              onRefresh={refresh}
-              onOpenSettings={() => router.push('/settings')}
-              points={points}
-              vaultsCount={vaultsCount}
-              username={profile?.displayName ?? username}
-              avatarSrc={profile?.profilePicture ?? avatarSrc}
-              phoneVerified={profile?.phoneVerified}
-              phoneNumber={profile?.phoneNumber ?? undefined}
-              identityVerified={(profile?.verificationLevel ?? 1) >= 2}
-              communityTrustUnlocked={(profile?.verificationLevel ?? 1) >= 3}
-              onVerifyIdentity={() => {
-              authFetch('/api/users/me')
-                .then((r) => r.json())
-                .then((d) => setProfile(d.profile ?? null));
-              }}
+              showBalance={showBalance}
+              onToggleBalance={() => setShowBalance(!showBalance)}
+              totalEquivalentInPhp={totalEquivalentInPhp}
+              walletUsdcBalance={walletUsdcBalance}
+              panel={panel}
+              setPanel={setPanel}
             />
           )}
 
