@@ -28,6 +28,7 @@ interface ProfileProps {
     provider?: string;
     signerAvailable?: boolean;
     error?: string | null;
+    authToken?: string | null;
   };
   username?: string;
   handle?: string;
@@ -61,7 +62,7 @@ export default function Profile({
   onOpenSettings,
   onProfileUpdated,
 }: ProfileProps) {
-  const { network } = wallet || {};
+  const { network, authToken } = wallet || {};
 
   const [localUsername, setLocalUsername] = useState(username);
   const [localAvatarSrc, setLocalAvatarSrc] = useState(avatarSrc);
@@ -77,11 +78,13 @@ export default function Profile({
 
   useEffect(() => {
     if (!identityVerified || !publicKey) return;
+    if (!authToken) return;
+
     authFetch('/api/verification/level3-status')
       .then((r) => r.json())
       .then((d) => setLevel3Status(d))
       .catch(() => setLevel3Status(null));
-  }, [identityVerified, publicKey]);
+  }, [identityVerified, publicKey, authToken]);
 
   const handleLevelUpClick = () => {
     setShowLevel2(true);
