@@ -340,11 +340,76 @@ export default function SavingsDashboard({ publicKey, wallet, onLogout, headerAc
     }
   };
 
-  const handleApproveAsSender = async () => { /* Same standard logic... */ };
-  const handleApproveAsReceiver = async () => { /* Same standard logic... */ };
-  const handleSubmitApprovedTransfer = async () => { /* Same standard logic... */ };
-  const handleVoidPendingApproval = async () => { /* Same standard logic... */ };
+  const handleApproveAsSender = async () => {
+    if (!pendingApproval) return;
+    setBusy(true);
+    try {
+      await runWithReauth(async () => {
+        await updatePendingTransferApproval(pendingApproval.id);
+        await refreshPendingApproval();
+        showToast('Approved. Waiting on the other party.', 'success');
+      });
+    } catch (e: unknown) {
+      showToast(e instanceof Error ? e.message : 'Failed to approve transfer', 'error');
+    } finally {
+      setBusy(false);
+    }
+  };
 
+  const handleApproveAsReceiver = async () => {
+    if (!pendingApproval) return;
+    setBusy(true);
+    try {
+      await runWithReauth(async () => {
+        await updatePendingTransferApproval(pendingApproval.id);
+        await refreshPendingApproval();
+        showToast('Approved. Waiting on the other party.', 'success');
+      });
+    } catch (e: unknown) {
+      showToast(e instanceof Error ? e.message : 'Failed to approve transfer', 'error');
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const handleSubmitApprovedTransfer = async () => {
+    if (!pendingApproval) return;
+    setBusy(true);
+    try {
+      await runWithReauth(async () => {
+        const result = await transferUSDC(pendingApproval.recipient, pendingApproval.amount);
+        await authFetch(`/api/transfers/${pendingApproval.id}/complete`, {
+          method: 'POST',
+          body: JSON.stringify({ hash: result.hash }),
+        });
+        await refresh();
+        await refreshHistory(publicKey);
+        await refreshPendingApproval();
+        showToast('Transfer sent successfully!', 'success');
+        setPanel(null);
+      });
+    } catch (e: unknown) {
+      showToast(e instanceof Error ? e.message : 'Failed to submit transfer', 'error');
+    } finally {
+      setBusy(false);
+      resetTransferState();
+    }
+  };
+
+  const handleVoidPendingApproval = async () => {
+    if (!pendingApproval) return;
+    setBusy(true);
+    try {
+      await removePendingTransferApproval(pendingApproval.id);
+      await refreshPendingApproval();
+      showToast('Transfer request cancelled.', 'success');
+    } catch (e: unknown) {
+      showToast(e instanceof Error ? e.message : 'Failed to cancel transfer', 'error');
+    } finally {
+      setBusy(false);
+    }
+  };
+  
   if (!configured) {
     return (
       <div className="p-6 max-w-md mx-auto bg-white border border-slate-100 rounded-2xl text-slate-800 flex items-center gap-3">
