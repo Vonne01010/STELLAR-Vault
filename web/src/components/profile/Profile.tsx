@@ -37,6 +37,7 @@ interface ProfileProps {
   phoneVerified?: boolean;
   phoneNumber?: string;
   identityVerified?: boolean;
+  level2GateUnlocked?: boolean;
   communityTrustUnlocked?: boolean;
   onVerifyIdentity?: () => void;
   onOpenSettings?: () => void;
@@ -54,6 +55,7 @@ export default function Profile({
   phoneVerified = true,
   phoneNumber = '+63 917 •• •• 213',
   identityVerified = false,
+  level2GateUnlocked = false,
   communityTrustUnlocked = false,
   onVerifyIdentity,
   onOpenSettings,
@@ -61,19 +63,12 @@ export default function Profile({
 }: ProfileProps) {
   const { network } = wallet || {};
 
-  // Local copies so the header updates immediately after a save, without
-  // waiting on the parent to refetch and pass new props back down.
   const [localUsername, setLocalUsername] = useState(username);
   const [localAvatarSrc, setLocalAvatarSrc] = useState(avatarSrc);
   const [showEditProfile, setShowEditProfile] = useState(false);
 
-  // Controls the Level 2 verification modal. Kept local to Profile since the
-  // gate + wizard is self-contained; onVerifyIdentity is still fired so a
-  // parent (e.g. to refetch user/points) can react if it needs to.
   const [showLevel2, setShowLevel2] = useState(false);
 
-  // Live Level 3 eligibility, fetched once Level 2 is done. Drives both the
-  // "x/4" summary in the collapsed row and the full checklist when expanded.
   const [level3Status, setLevel3Status] = useState<{
     eligible: boolean;
     checks?: Record<string, boolean>;
@@ -109,7 +104,6 @@ export default function Profile({
 
   return (
     <div className="px-5 py-4 space-y-7 animate-fade-in">
-      {/* Top bar */}
       <div className="flex justify-between items-center px-1">
         <h3 className="text-xl font-semibold text-[#FF5E00] tracking-tight">Profile</h3>
         <button
@@ -122,7 +116,6 @@ export default function Profile({
         </button>
       </div>
 
-      {/* Avatar + identity */}
       <div className="flex flex-col items-center gap-3">
         <div className="relative w-20 h-20">
           <div className="w-20 h-20 rounded-full bg-linear-to-b from-orange-50 to-orange-100 border-4 border-white shadow-md shadow-orange-900/10 overflow-hidden relative">
@@ -163,9 +156,6 @@ export default function Profile({
         </div>
       </div>
 
-      {/* Progressive identity — one card, one row per level, only the
-          actionable level expands with a CTA. Collapsing levels 1 and 3 to
-          single rows keeps the whole ladder scannable at a glance. */}
       <div className="space-y-2.5">
         <div className="px-1">
           <h3 className="text-sm font-semibold text-slate-800 tracking-tight">Progressive Identity</h3>
@@ -173,7 +163,6 @@ export default function Profile({
         </div>
 
         <div className="bg-white border border-slate-200/60 rounded-2xl divide-y divide-slate-100">
-          {/* Level 1 */}
           <div className="flex items-center justify-between px-4 py-3">
             <div className="flex items-center gap-2.5">
               <span className="text-[10px] font-medium uppercase tracking-wider text-slate-300 w-4">1</span>
@@ -182,7 +171,6 @@ export default function Profile({
             {phoneVerified && <CheckBadgeIcon className="text-emerald-500 shrink-0" />}
           </div>
 
-          {/* Level 2 */}
           <div className="px-4 py-3 space-y-2">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2.5">
@@ -201,7 +189,6 @@ export default function Profile({
             )}
           </div>
 
-          {/* Level 3 */}
           <div className="px-4 py-3 space-y-2">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2.5">
@@ -247,7 +234,6 @@ export default function Profile({
         </div>
       </div>
 
-      {/* Edit profile modal — editing needs a pubkey to save against */}
       {publicKey && (
         <EditProfileModal
           open={showEditProfile}
@@ -263,22 +249,19 @@ export default function Profile({
         />
       )}
 
-      {/* Level 2 verification modal */}
       {showLevel2 && (
         <div
           className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-sm px-4"
           onClick={(e) => {
-            // close only when clicking the backdrop, not the modal card itself
             if (e.target === e.currentTarget) setShowLevel2(false);
           }}
         >
           <Level2Verification
             currentPoints={points}
             verifiedPhone={phoneNumber}
+            level2GateUnlocked={level2GateUnlocked}
             onClose={() => setShowLevel2(false)}
             onComplete={() => {
-              // Close on success; refetch so the real (post-submission) verificationLevel
-              // flows back down from SavingsDashboard into this component's props.
               setShowLevel2(false);
               onVerifyIdentity?.();
             }}

@@ -11,6 +11,7 @@ import { Level2Data, emptyLevel2Data, toAlternativeIdType } from "./Types";
 interface Level2VerificationProps {
   currentPoints: number; // pull from useAuth() / user record
   verifiedPhone: string; // pull from useAuth() / user record
+  level2GateUnlocked: boolean;
   onClose: () => void;
   onComplete: () => void; // called after successful submit, e.g. to refresh useAuth() state
 }
@@ -18,10 +19,11 @@ interface Level2VerificationProps {
 export default function Level2Verification({
   currentPoints,
   verifiedPhone,
+  level2GateUnlocked,
   onClose,
   onComplete,
 }: Level2VerificationProps) {
-  const [unlocked, setUnlocked] = useState(false);
+  const [unlocked, setUnlocked] = useState(level2GateUnlocked);
   const [step, setStep] = useState(0);
   const [submitted, setSubmitted] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
