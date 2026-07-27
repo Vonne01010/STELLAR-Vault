@@ -126,6 +126,10 @@ export default function RegisterPage() {
           pubkey: publicKey,
           username: displayName.trim(),
           avatarUrl: profilePicture ?? undefined,
+          country,
+          email: email || undefined,
+          phoneVerified: true,
+          tosAccepted: true,
         }),
       });
     } catch {

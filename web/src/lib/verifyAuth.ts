@@ -10,8 +10,16 @@ export async function verifyAuth(request: Request): Promise<{ pubkey: string } |
 
   const token = authHeader.replace("Bearer ", "").trim()
 
+  const secret = process.env.JWT_SECRET
+  if (!secret) {
+    return null
+  }
+
   try {
-    const payload = jwt.verify(token, process.env.JWT_SECRET!) as { pubkey: string }
+    const payload = jwt.verify(token, secret) as { pubkey?: string }
+    if (!payload.pubkey || typeof payload.pubkey !== "string") {
+      return null
+    }
 
     const user = await prisma.user.findUnique({ where: { pubkey: payload.pubkey } })
     if (!user || user.deletedAt) {

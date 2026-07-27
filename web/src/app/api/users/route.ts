@@ -44,11 +44,21 @@ export async function POST(request: Request) {
         // if this route is ever called with a partial payload.
         ...(body.username !== undefined && { username: body.username }),
         ...(body.avatarUrl !== undefined && { avatarUrl: body.avatarUrl }),
+        ...(body.phone !== undefined && { phone: body.phone }),
+        ...(body.phoneVerified !== undefined && { phoneVerified: body.phoneVerified }),
+        ...(body.email !== undefined && { email: body.email }),
+        ...(body.country !== undefined && { country: body.country }),
+        ...(body.tosAccepted !== undefined && { tosAccepted: body.tosAccepted }),
       },
       create: {
         pubkey: body.pubkey,
         username: body.username,
         avatarUrl: body.avatarUrl,
+        phone: body.phone,
+        phoneVerified: body.phoneVerified ?? false,
+        email: body.email,
+        country: body.country,
+        tosAccepted: body.tosAccepted ?? false,
       },
     })
 

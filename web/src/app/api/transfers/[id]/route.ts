@@ -39,7 +39,45 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
       data: patch,
     })
 
+    // NEW — tell the other party what just happened
+    const counterpartyPubkey = auth.pubkey === transfer.senderPubkey ? transfer.recipientPubkey : transfer.senderPubkey
+    const approverRole = auth.pubkey === transfer.senderPubkey ? "sender" : "recipient"
+
+    if (patch.status === "ready_to_submit") {
+      await Promise.all([
+        prisma.notification.create({
+          data: {
+            pubkey: transfer.senderPubkey,
+            message: `Transfer of ${(transfer.amount).toFixed(2)} USDC approved by both parties. Ready to send.`,
+            vaultId: null,
+            variant: "success",
+            meta: { event: "transfer_ready", transferId: id, timestamp: new Date().toISOString() },
+          },
+        }),
+        prisma.notification.create({
+          data: {
+            pubkey: transfer.recipientPubkey,
+            message: `Transfer of ${(transfer.amount).toFixed(2)} USDC approved by both parties. Ready to be sent to you.`,
+            vaultId: null,
+            variant: "success",
+            meta: { event: "transfer_ready", transferId: id, timestamp: new Date().toISOString() },
+          },
+        }),
+      ]).catch((err) => console.error("Failed to notify parties of ready transfer:", err))
+    } else {
+      await prisma.notification.create({
+        data: {
+          pubkey: counterpartyPubkey,
+          message: `The ${approverRole} approved the ${Number(transfer.amount).toFixed(2)} USDC transfer request. Waiting on your approval.`,
+          vaultId: null,
+          variant: "action_required",
+          meta: { event: "transfer_partial_approval", transferId: id, approverRole, timestamp: new Date().toISOString() },
+        },
+      }).catch((err) => console.error("Failed to notify counterparty of approval:", err))
+    }
+
     return Response.json(updated)
+
   } catch (error) {
     console.error("Failed to update pending transfer:", error)
     return Response.json({ error: "Failed to update transfer" }, { status: 500 })
@@ -64,6 +102,17 @@ export async function DELETE(request: Request, { params }: { params: Promise<{ i
     }
 
     await prisma.pendingTransfer.delete({ where: { id } })
+
+    const counterpartyPubkey = auth.pubkey === transfer.senderPubkey ? transfer.recipientPubkey : transfer.senderPubkey
+    await prisma.notification.create({
+      data: {
+        pubkey: counterpartyPubkey,
+        message: `The ${Number(transfer.amount).toFixed(2)} USDC transfer request was cancelled.`,
+        vaultId: null,
+        variant: "warning",
+        meta: { event: "transfer_cancelled", transferId: id, timestamp: new Date().toISOString() },
+      },
+    }).catch((err) => console.error("Failed to notify counterparty of cancellation:", err))
     return Response.json({ success: true })
   } catch (error) {
     console.error("Failed to delete pending transfer:", error)

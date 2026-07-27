@@ -17,6 +17,8 @@ model User {
 
   points Int @default(0)
 
+  referralCode String? @unique
+
   level2GateUnlockedAt   DateTime?
   level2GateUnlockMethod String?  // "points" | "payment"
 

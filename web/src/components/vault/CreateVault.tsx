@@ -6,6 +6,7 @@ import { submitSignedXDR, pollTransactionForResult } from '@/lib/payment';
 import { CONTRACT_ID } from '@/lib/stellar';
 import { authFetch, signWithCurrentAccount, walletService } from '@/lib/wallet';
 import { createAppNotification } from '@/lib/notifications';
+import { recordHistoryEntry } from '@/lib/history';
 
 type Status = 'idle' | 'building' | 'signing' | 'submitting' | 'confirming' | 'saving' | 'success' | 'error';
 
@@ -59,21 +60,11 @@ export default function CreateVault({
       const signedXdr = await signWithCurrentAccount(xdr);
 
       setStatus('submitting');
-      await createAppNotification({
-        message: 'Vault creation transaction submitted to the blockchain.',
-        variant: 'info',
-        meta: { event: 'transaction_submitted', operation: 'create_vault', timestamp: new Date().toISOString() },
-      }).catch(() => undefined);
       const hash = await submitSignedXDR(signedXdr);
 
       setStatus('confirming');
       const onChainVaultId = await pollTransactionForResult(hash);
-      await createAppNotification({
-        message: 'Vault creation transaction confirmed on-chain.',
-        variant: 'success',
-        meta: { event: 'transaction_confirmed', operation: 'create_vault', hash, timestamp: new Date().toISOString() },
-      }).catch(() => undefined);
-      if (onChainVaultId === undefined || onChainVaultId === null) {
+       if (onChainVaultId === undefined || onChainVaultId === null) {
         throw new Error('Vault was created on-chain, but no vault ID was returned.');
       }
 
@@ -97,7 +88,21 @@ export default function CreateVault({
       }
 
       setStatus('success');
+      recordHistoryEntry({
+        account: publicKey,
+        kind: 'vault_create',
+        title: 'Vault created',
+        description: `Created ${vaultType.toLowerCase()} vault "${name.trim()}"${targetAmount ? ` with a goal of ${Number(targetAmount).toFixed(2)} USDC` : ''}`,
+        amount: Number(targetAmount) || 0,
+        asset: 'USDC',
+        counterparty: 'vault',
+        timestamp: new Date().toISOString(),
+        source: 'local',
+        hash,
+        status: 'confirmed',
+      });
       onCreated(data.id);
+
     } catch (e: unknown) {
       const message = e instanceof Error ? e.message : 'Vault creation failed';
 
