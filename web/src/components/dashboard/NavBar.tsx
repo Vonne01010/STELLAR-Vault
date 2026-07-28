@@ -43,15 +43,18 @@ function NavGlyph({ type }: { type: Tab }) {
 interface NavBarProps {
   activeTab: AppTab;
   onTabChange: (tab: AppTab) => void;
+  /** Which home sub-zone is active, so the Home icon can reflect it (orange = vault, cyan = wallet). */
+  homeZone?: 'vault' | 'wallet';
 }
 
-export default function NavBar({ activeTab, onTabChange }: NavBarProps) {
+export default function NavBar({ activeTab, onTabChange, homeZone = 'vault' }: NavBarProps) {
   const tabs: AppTab[] = ['home', 'vaults', 'tracker', 'activity', 'profile'];
 
   return (
     <div className="absolute bottom-0 inset-x-0 bg-white/95 backdrop-blur-md border-t border-slate-100 px-4 pt-3 pb-7 flex justify-between items-center z-40">
       {tabs.map((tab) => {
         const isSelected = activeTab === tab;
+        const isCyan = isSelected && tab === 'home' && homeZone === 'wallet';
 
         return (
           <button
@@ -61,7 +64,9 @@ export default function NavBar({ activeTab, onTabChange }: NavBarProps) {
           >
             <span
               className={`p-2 rounded-full transition-colors flex items-center justify-center ${
-                isSelected ? 'bg-slate-100 text-[#FF9F1C]' : 'text-slate-400 hover:bg-slate-50'
+                isSelected
+                  ? `bg-slate-100 ${isCyan ? 'text-cyan-500' : 'text-[#FF9F1C]'}`
+                  : 'text-slate-400 hover:bg-slate-50'
               }`}
             >
               {tab === 'tracker' ? (

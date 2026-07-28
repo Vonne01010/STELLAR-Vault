@@ -446,23 +446,22 @@ const handleVoidPendingApproval = async (id: string) => {
           )}
 
           {activeTab === 'home' && (
-            <div className="mx-6 mt-5 flex bg-slate-100 rounded-full p-1">
-              <button
-                onClick={() => { setHomeZone('vault'); setPanel(null); }}
-                className={`flex-1 py-2 rounded-full text-xs font-semibold tracking-wide transition-colors ${
-                  homeZone === 'vault' ? 'bg-white text-[#1A1A1A] shadow-sm' : 'text-slate-400'
+            <div className="mx-6 mt-5 flex items-center justify-center gap-2">
+              <span
+                className={`h-1.5 rounded-full transition-all duration-300 ${
+                  homeZone === 'vault' ? 'w-6 bg-[#FF9F1C]' : 'w-1.5 bg-slate-200'
                 }`}
-              >
-                Vault
-              </button>
-              <button
-                onClick={() => { setHomeZone('wallet'); setPanel(null); }}
-                className={`flex-1 py-2 rounded-full text-xs font-semibold tracking-wide transition-colors ${
-                  homeZone === 'wallet' ? 'bg-white text-[#1A1A1A] shadow-sm' : 'text-slate-400'
+                aria-hidden="true"
+              />
+              <span
+                className={`h-1.5 rounded-full transition-all duration-300 ${
+                  homeZone === 'wallet' ? 'w-6 bg-cyan-500' : 'w-1.5 bg-slate-200'
                 }`}
-              >
-                Wallet
-              </button>
+                aria-hidden="true"
+              />
+              <span className="ml-2 text-[10px] uppercase tracking-wide text-slate-300 font-semibold">
+                Swipe to switch
+              </span>
             </div>
           )}
 
@@ -476,20 +475,7 @@ const handleVoidPendingApproval = async (id: string) => {
               walletUsdcBalance={walletUsdcBalance}
               panel={panel}
               setPanel={setPanel}
-              // onRefresh={refresh}
-              // onOpenSettings={() => router.push('/settings')}
-              // points={points}
-              // vaultsCount={vaultsCount}
-              // username={profile?.displayName ?? username}
-              // avatarSrc={profile?.profilePicture ?? avatarSrc}
-              // phoneVerified={profile?.phoneVerified}
-              // phoneNumber={profile?.phoneNumber ?? undefined}
-              // identityVerified={(profile?.verificationLevel ?? 1) >= 2}
-              // communityTrustUnlocked={(profile?.verificationLevel ?? 1) >= 3}
-              // onVerifyIdentity={() => {
-              // authFetch('/api/users/me')
-              //   .then((r) => r.json())
-              //   .then((d) => setProfile(d.profile ?? null));
+              onSwipeToWallet={() => { setHomeZone('wallet'); setPanel(null); }}
             />
           )}
 
@@ -504,6 +490,7 @@ const handleVoidPendingApproval = async (id: string) => {
               setPanel={setPanel}
               history={history}
               onSeeAllActivity={() => setActiveTab('activity')}
+              onSwipeToVault={() => { setHomeZone('vault'); setPanel(null); }}
             />
           )}
 
@@ -615,6 +602,7 @@ const handleVoidPendingApproval = async (id: string) => {
         <NavBar 
           activeTab={activeTab} 
           onTabChange={(tab) => { setActiveTab(tab); setPanel(null); }} 
+          homeZone={homeZone}
         />
         
       </div>
