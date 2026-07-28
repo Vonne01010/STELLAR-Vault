@@ -3,9 +3,9 @@
 import React from 'react';
 import Image from 'next/image';
 import VaultCore from '@/components/dashboard/VaultCore';
-import { EyeIcon, DepositIcon, WithdrawIcon, CreateIcon } from '@/app/icons';
+import BalanceCard from '@/components/dashboard/BalanceCard';
+import { DepositIcon, WithdrawIcon, CreateIcon } from '@/app/icons';
 import type { Panel } from '@/lib/dashboardTypes';
-import { useSwipeX } from '@/lib/useSwipeX';
 
 interface VaultZoneProps {
   loading: boolean;
@@ -62,7 +62,6 @@ export default function VaultZone({
   onSwipeToWallet,
 }: VaultZoneProps) {
   const isPanelOpen = panel === 'deposit' || panel === 'withdraw' || panel === 'create';
-  const swipeHandlers = useSwipeX(onSwipeToWallet, undefined);
 
   return (
     <div className="mx-6 mt-6 space-y-5">
@@ -96,47 +95,26 @@ export default function VaultZone({
         </div>
       ) : (
         <>
-          <div
-            {...swipeHandlers}
-            className="p-6 rounded-3xl bg-linear-to-br from-[#FFB238] via-[#FF9F1C] to-[#F37A00] text-white shadow-[0_18px_30px_-14px_rgba(230,80,0,0.40)] relative overflow-hidden animate-fadeIn touch-pan-y"
-          >
-            <Image
-              src="/safeIcon.png"
-              alt=""
-              aria-hidden="true"
-              width={176}
-              height={176}
-              className="absolute right-6 top-1/2 -translate-y-1/2 w-40 h-40 object-contain pointer-events-none select-none"
-            />
-
-            <div className="space-y-2 relative z-10">
-              <div className="flex items-center justify-between">
-                <span className="text-[11px] tracking-[0.14em] uppercase font-semibold text-white/80">Total Balance</span>
-              </div>
-
-              <div className="flex items-baseline gap-1.5 mt-3">
-                <span className="text-lg font-semibold text-white/85">₱</span>
-                {loading ? (
-                  <h1 className="text-xl font-light text-white/60">Loading…</h1>
-                ) : (
-                  <h1 className="text-[2.6rem] font-semibold tracking-tight leading-none">
-                    {showBalance ? totalEquivalentInPhp.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '••••••'}
-                  </h1>
-                )}
-                <button
-                  onClick={onToggleBalance}
-                  className="w-6 h-6 rounded-full bg-white/20 hover:bg-white/30 flex items-center justify-center transition-colors shrink-0 self-center"
-                  aria-label="Toggle balance visibility"
-                >
-                  <EyeIcon className="w-3.5 h-3.5" />
-                </button>
-              </div>
-
-              <span className="text-xs font-medium tracking-wide text-white/80 flex items-center gap-1.5 pt-1">
-                {showBalance ? `≈ ${walletUsdcBalance.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} USDC` : '•••••• USDC'}
-              </span>
-            </div>
-          </div>
+          <BalanceCard
+            zone="vault"
+            loading={loading}
+            showBalance={showBalance}
+            onToggleBalance={onToggleBalance}
+            totalEquivalentInPhp={totalEquivalentInPhp}
+            walletUsdcBalance={walletUsdcBalance}
+            onSwipeToWallet={onSwipeToWallet}
+            label="Total Balance"
+            artwork={
+              <Image
+                src="/safeIcon.png"
+                alt=""
+                aria-hidden="true"
+                width={176}
+                height={176}
+                className="absolute right-6 top-1/2 -translate-y-1/2 w-40 h-40 object-contain pointer-events-none select-none"
+              />
+            }
+          />
 
           <div className="grid grid-cols-3 gap-4 px-2">
             {([

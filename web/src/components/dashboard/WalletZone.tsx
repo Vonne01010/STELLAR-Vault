@@ -1,10 +1,10 @@
 'use client';
 
 import React from 'react';
-import { EyeIcon, SendIcon, ReceiveIcon } from '@/app/icons';
+import { SendIcon, ReceiveIcon } from '@/app/icons';
+import BalanceCard from '@/components/dashboard/BalanceCard';
 import type { Panel } from '@/lib/dashboardTypes';
 import type { HistoryEntry } from '@/lib/history';
-import { useSwipeX } from '@/lib/useSwipeX';
 
 interface WalletZoneProps {
   loading: boolean;
@@ -41,7 +41,6 @@ export default function WalletZone({
   onSwipeToVault,
 }: WalletZoneProps) {
   const isPanelOpen = panel === 'send' || panel === 'receive';
-  const swipeHandlers = useSwipeX(undefined, onSwipeToVault);
 
   return (
     <div className="mx-6 mt-6 space-y-5">
@@ -79,50 +78,15 @@ export default function WalletZone({
         </div>
       ) : (
         <>
-          <div
-            {...swipeHandlers}
-            className="p-6 rounded-3xl bg-linear-to-br from-cyan-400 via-cyan-500 to-blue-600 text-white shadow-[0_18px_30px_-14px_rgba(8,145,178,0.40)] relative overflow-hidden animate-fadeIn touch-pan-y"
-          >
-            <svg
-              aria-hidden="true"
-              viewBox="0 0 24 24"
-              fill="none"
-              className="absolute right-3 top-1/2 -translate-y-1/2 w-40 h-40 text-white/15 pointer-events-none select-none"
-            >
-              <rect x="2" y="6" width="20" height="14" rx="3" stroke="currentColor" strokeWidth="1.2" />
-              <path d="M2 10h20" stroke="currentColor" strokeWidth="1.2" />
-              <circle cx="17" cy="15" r="1.6" fill="currentColor" />
-              <path d="M6 6V5a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v1" stroke="currentColor" strokeWidth="1.2" />
-            </svg>
-
-            <div className="space-y-2 relative z-10">
-              <div className="flex items-center justify-between">
-                <span className="text-[11px] tracking-[0.14em] uppercase font-semibold text-white/80">Spendable Balance</span>
-              </div>
-
-              <div className="flex items-baseline gap-1.5 mt-3">
-                <span className="text-lg font-semibold text-white/85">₱</span>
-                {loading ? (
-                  <h1 className="text-xl font-light text-white/60">Loading…</h1>
-                ) : (
-                  <h1 className="text-[2.6rem] font-semibold tracking-tight leading-none">
-                    {showBalance ? totalEquivalentInPhp.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '••••••'}
-                  </h1>
-                )}
-                <button
-                  onClick={onToggleBalance}
-                  className="w-6 h-6 rounded-full bg-white/20 hover:bg-white/30 flex items-center justify-center transition-colors shrink-0 self-center"
-                  aria-label="Toggle balance visibility"
-                >
-                  <EyeIcon className="w-3.5 h-3.5" />
-                </button>
-              </div>
-
-              <span className="text-xs font-medium tracking-wide text-white/80 flex items-center gap-1.5 pt-1">
-                {showBalance ? `≈ ${walletUsdcBalance.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} USDC` : '•••••• USDC'}
-              </span>
-            </div>
-          </div>
+          <BalanceCard
+            zone="wallet"
+            loading={loading}
+            showBalance={showBalance}
+            onToggleBalance={onToggleBalance}
+            totalEquivalentInPhp={totalEquivalentInPhp}
+            walletUsdcBalance={walletUsdcBalance}
+            onSwipeToVault={onSwipeToVault}
+          />
 
           <div className="grid grid-cols-2 gap-4 px-2">
             {([

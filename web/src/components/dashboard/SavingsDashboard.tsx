@@ -521,6 +521,7 @@ export default function SavingsDashboard({ publicKey, wallet, onLogout, headerAc
         <NavBar 
           activeTab={activeTab} 
           onTabChange={(tab) => { setActiveTab(tab); setPanel(null); }} 
+          homeZone={homeZone}
         />
         
       </div>
