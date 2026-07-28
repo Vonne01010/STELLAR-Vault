@@ -16,6 +16,8 @@ function entryVisual(kind: string) {
       return { bg: 'bg-[#FFEFE6]', fg: 'text-[#FF5E00]', icon: '↑' };
     case 'send':
       return { bg: 'bg-[#E3FCFC]', fg: 'text-[#00A3A3]', icon: '➤' };
+    case 'vault_create':
+      return { bg: 'bg-[#F3E8FF]', fg: 'text-[#9333EA]', icon: '✦' };
     default:
       return { bg: 'bg-[#E6FBF3]', fg: 'text-[#10B981]', icon: '↓' };
   }

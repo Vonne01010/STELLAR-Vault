@@ -49,6 +49,7 @@ export default function StepIdentity({ data, setData, onNext, onBack }: StepProp
               <option value="school">School ID</option>
               <option value="employer">Employer ID</option>
               <option value="coop">Cooperative membership ID</option>
+              <option value="barangay">Barangay certificate</option>
             </select>
           </div>
           <div>

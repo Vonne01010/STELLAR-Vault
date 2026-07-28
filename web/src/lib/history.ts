@@ -1,7 +1,7 @@
 import { Horizon } from '@stellar/stellar-sdk';
 import { HORIZON_URL } from './stellar';
 
-export type HistoryKind = 'deposit' | 'withdraw' | 'send' | 'receive' | 'other';
+export type HistoryKind = 'deposit' | 'withdraw' | 'send' | 'receive' | 'vault_create' | 'other';
 
 export interface HistoryEntry {
   id: string;

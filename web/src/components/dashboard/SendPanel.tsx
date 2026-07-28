@@ -8,7 +8,7 @@ export default function SendPanel({
   publicKey,
   sendMode,
   onSendModeChange,
-  pendingApproval,
+  pendingApprovals,
   recipient,
   onRecipientChange,
   transferAmount,
@@ -28,17 +28,17 @@ export default function SendPanel({
   publicKey: string | null;
   sendMode: 'amount' | 'qr';
   onSendModeChange: (mode: 'amount' | 'qr') => void;
-  pendingApproval: PendingTransferApproval | null;
+  pendingApprovals: PendingTransferApproval[];
   recipient: string;
   onRecipientChange: (value: string) => void;
   transferAmount: string;
   onTransferAmountChange: (value: string) => void;
   busy: boolean;
   onTransferRequest: () => void;
-  onApproveAsSender: () => void;
-  onApproveAsReceiver: () => void;
-  onSubmitApprovedTransfer: () => void;
-  onVoidPendingApproval: () => void;
+  onApproveAsSender: (id: string) => void;
+  onApproveAsReceiver: (id: string) => void;
+  onSubmitApprovedTransfer: (id: string) => void;
+  onVoidPendingApproval: (id: string) => void;
   needsPin: boolean;
   scannedOk: boolean;
   scanError: string;
@@ -78,13 +78,14 @@ export default function SendPanel({
                   <div className="space-y-1">
                     <label className="block text-[11px] uppercase tracking-wide text-slate-500 font-semibold">Address</label>
                     <input
-                      type="text"
-                      value={recipient}
-                      onChange={(e) => onRecipientChange(e.target.value)}
-                      placeholder="Stellar Public Address (G...)"
+                      type="number"
+                      value={transferAmount}
+                      onChange={(e) => onTransferAmountChange(e.target.value)}
+                      placeholder="0.00"
                       disabled={busy}
                       className="w-full rounded-xl bg-slate-50 border border-slate-100 px-3.5 py-2.5 text-[11px] font-mono text-slate-600 outline-none focus:border-[#A0F0F0] transition-colors placeholder:text-slate-300"
                     />
+                    <span className="absolute right-4 text-[10px] text-slate-400">USDC</span>
                   </div>
                   <div className="space-y-1">
                     <label className="block text-[11px] uppercase tracking-wide text-slate-500 font-semibold">Amount</label>
@@ -117,7 +118,6 @@ export default function SendPanel({
                     {busy ? 'Sending Request…' : 'Send'}
                   </button>
                 </div>
-              )}
 
               {pendingApproval && pendingApproval.sender === publicKey && (
                 <div className="rounded-2xl border border-slate-100 bg-slate-50/50 p-4 space-y-3.5 animate-fadeIn">
@@ -189,7 +189,7 @@ export default function SendPanel({
           ) : (
             <div className="flex flex-col items-center justify-center py-5 bg-slate-50 rounded-2xl border border-dashed border-slate-200 space-y-3 animate-fadeIn">
               <QRScanner
-                active={sendMode === 'qr' && !pendingApproval && !needsPin}
+                active={sendMode === 'qr' && pendingApprovals.length === 0 && !needsPin}
                 onScan={onQrScanResult}
               />
               {!scannedOk && !scanError && (

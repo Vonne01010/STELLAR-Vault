@@ -128,32 +128,7 @@ async function signXdr(xdr: string): Promise<string> {
 
 async function submitAndConfirm(signedXdr: string, operation: TransferOperation, vaultId?: string | number): Promise<string> {
   setState({ status: 'submitting', message: 'Broadcasting transaction…' });
-  await createAppNotification({
-    message: operation === 'deposit'
-      ? 'Deposit transaction submitted to the blockchain.'
-      : operation === 'withdraw'
-        ? 'Withdrawal transaction submitted to the blockchain.'
-        : 'Transfer transaction submitted to the blockchain.',
-    vaultId: vaultId !== undefined ? String(vaultId) : null,
-    variant: 'info',
-    meta: { event: 'transaction_submitted', operation, timestamp: new Date().toISOString() },
-  }).catch(() => undefined);
-
   const hash = await submitSignedXDR(signedXdr);
-  setState({ status: 'pending_confirmation', message: 'Waiting for confirmation…' });
-  await pollTransaction(hash);
-
-  await createAppNotification({
-    message: operation === 'deposit'
-      ? 'Deposit transaction confirmed on-chain.'
-      : operation === 'withdraw'
-        ? 'Withdrawal transaction confirmed on-chain.'
-        : 'Transfer transaction confirmed on-chain.',
-    vaultId: vaultId !== undefined ? String(vaultId) : null,
-    variant: 'success',
-    meta: { event: 'transaction_confirmed', operation, hash, timestamp: new Date().toISOString() },
-  }).catch(() => undefined);
-
   return hash;
 }
 
@@ -234,10 +209,10 @@ async function runTransfer(
       kind: operation === 'deposit' ? 'deposit' : operation === 'withdraw' ? 'withdraw' : 'send',
       title: operation === 'deposit' ? 'Vault deposit' : operation === 'withdraw' ? 'Vault withdrawal' : 'USDC sent',
       description: operation === 'deposit'
-        ? `Saved ${normalizedAmount.toFixed(7)} USDC into the vault`
+        ? `Saved ${normalizedAmount.toFixed(2)} USDC into the vault`
         : operation === 'withdraw'
-          ? `Withdrew ${normalizedAmount.toFixed(7)} USDC from the vault`
-          : `${options.category ? `[${options.category}] ` : ''}Sent ${normalizedAmount.toFixed(7)} USDC to ${options.recipient ?? ''}`,
+          ? `Withdrew ${normalizedAmount.toFixed(2)} USDC from the vault`
+          : `${options.category ? `[${options.category}] ` : ''}Sent ${normalizedAmount.toFixed(2)} USDC to ${options.recipient ?? ''}`,
       amount: normalizedAmount,
       asset: 'USDC',
       counterparty: operation === 'transfer' ? options.recipient ?? '' : 'vault',

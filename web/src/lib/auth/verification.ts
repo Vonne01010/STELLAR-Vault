@@ -1,39 +1,33 @@
-export type VerificationLevel = 0 | 1 | 2;
+import { prisma } from "@/lib/prisma";
+
+export type VerificationLevel = 1 | 2 | 3;
 
 export interface UserProfile {
-  // Level 0 — required
-  displayName: string;
-  country: string;
-  phoneNumber: string;
+  displayName: string | null;
+  country: string | null;
+  phoneNumber: string | null;
   phoneVerified: boolean;
   tosAccepted: boolean;
-
-  // Level 0 — optional
-  email?: string;
-  profilePicture?: string;
-  referralCode?: string;
-
-  // Level 1 — alternative identity
-  alternativeIdType?:
-    | 'school_id'
-    | 'employer_id'
-    | 'cooperative_id'
-    | 'barangay_cert'
-    | 'endorsement';
-  alternativeIdVerified?: boolean;
-  selfieVerified?: boolean;
-
-  // Level 2 — full KYC
-  governmentIdVerified?: boolean;
-  kycPartner?: string;
-
-  // Meta
+  email: string | null;
+  profilePicture: string | null;
+  referralCode: string | null;
+  alternativeIdType:
+    | "school_id"
+    | "employer_id"
+    | "cooperative_id"
+    | "barangay_cert"
+    | "endorsement"
+    | null;
+  alternativeIdVerified: boolean;
+  selfieVerified: boolean;
+  governmentIdVerified: boolean;
+  kycPartner: string | null;
   verificationLevel: VerificationLevel;
   createdAt: string;
 }
 
 export interface TrustScore {
-  score: number;                  // 0–100
+  score: number;
   savingsGoalsCompleted: number;
   onTimeDeposits: number;
   collaborativeVaults: number;
@@ -41,52 +35,69 @@ export interface TrustScore {
   accountAgeMonths: number;
 }
 
-const PROFILE_KEY = 'stella_vault_profile';
-const TRUST_KEY = 'stella_vault_trust';
-
 // ─── Profile ────────────────────────────────────────────────────────────────
 
-export function saveProfile(profile: UserProfile): void {
-  if (typeof window === 'undefined') return;
-  localStorage.setItem(PROFILE_KEY, JSON.stringify(profile));
+export async function loadProfile(pubkey: string): Promise<UserProfile | null> {
+  const user = await prisma.user.findUnique({ where: { pubkey } });
+  if (!user) return null;
+
+  return {
+    displayName: user.username,
+    country: null, // not yet on schema — add if you collect this
+    phoneNumber: user.phone,
+    phoneVerified: user.phoneVerified,
+    tosAccepted: true, // not yet on schema — add a real column if this needs tracking
+    email: user.email,
+    profilePicture: user.avatarUrl,
+    referralCode: null, // not yet on schema
+    alternativeIdType: user.alternativeIdType as UserProfile["alternativeIdType"],
+    alternativeIdVerified: user.alternativeIdVerified,
+    selfieVerified: user.selfieVerified,
+    governmentIdVerified: false, // Level 3 fields not yet on schema
+    kycPartner: null,
+    verificationLevel: user.verificationLevel as VerificationLevel,
+    createdAt: user.createdAt.toISOString(),
+  };
 }
 
-export function loadProfile(): UserProfile | null {
-  if (typeof window === 'undefined') return null;
-  const raw = localStorage.getItem(PROFILE_KEY);
-  return raw ? (JSON.parse(raw) as UserProfile) : null;
+export async function updateProfile(
+  pubkey: string,
+  patch: Partial<{
+    username: string;
+    email: string;
+    alternativeIdType: string;
+    alternativeIdVerified: boolean;
+    selfieVerified: boolean;
+    verificationLevel: number;
+  }>
+) {
+  return prisma.user.update({ where: { pubkey }, data: patch });
 }
 
-export function updateProfile(patch: Partial<UserProfile>): UserProfile | null {
-  const existing = loadProfile();
-  if (!existing) return null;
-  const updated = { ...existing, ...patch };
-  saveProfile(updated);
-  return updated;
-}
-
-export function clearProfile(): void {
-  if (typeof window === 'undefined') return;
-  localStorage.removeItem(PROFILE_KEY);
-}
-
-export function getVerificationLevel(): VerificationLevel {
-  return loadProfile()?.verificationLevel ?? 0;
-}
-
-export function hasProfile(): boolean {
-  if (typeof window === 'undefined') return false;
-  return localStorage.getItem(PROFILE_KEY) !== null;
+export async function getVerificationLevel(pubkey: string): Promise<VerificationLevel> {
+  const user = await prisma.user.findUnique({ where: { pubkey }, select: { verificationLevel: true } });
+  return (user?.verificationLevel as VerificationLevel) ?? 1;
 }
 
 // ─── Trust Score ─────────────────────────────────────────────────────────────
 
-export function loadTrustScore(): TrustScore {
-  if (typeof window === 'undefined') {
-    return defaultTrustScore();
-  }
-  const raw = localStorage.getItem(TRUST_KEY);
-  return raw ? (JSON.parse(raw) as TrustScore) : defaultTrustScore();
+export async function loadTrustScore(pubkey: string): Promise<TrustScore> {
+  const user = await prisma.user.findUnique({ where: { pubkey } });
+  if (!user) return defaultTrustScore();
+
+  const accountAgeMonths = Math.floor(
+    (Date.now() - user.createdAt.getTime()) / (1000 * 60 * 60 * 24 * 30)
+  );
+
+  const data = {
+    savingsGoalsCompleted: user.savingsGoalsCompleted,
+    onTimeDeposits: user.onTimeDeposits,
+    collaborativeVaults: user.collaborativeVaultsCount,
+    disputes: user.disputesCount,
+    accountAgeMonths,
+  };
+
+  return { ...data, score: computeTrustScore(data) };
 }
 
 function defaultTrustScore(): TrustScore {
@@ -100,83 +111,136 @@ function defaultTrustScore(): TrustScore {
   };
 }
 
-export function computeTrustScore(data: Omit<TrustScore, 'score'>): number {
+export function computeTrustScore(data: Omit<TrustScore, "score">): number {
   let score = 0;
-  score += Math.min(data.savingsGoalsCompleted * 8, 30);  // max 30 pts
-  score += Math.min(data.onTimeDeposits * 2, 20);         // max 20 pts
-  score += Math.min(data.collaborativeVaults * 5, 25);    // max 25 pts
-  score += Math.min(data.accountAgeMonths * 1, 15);       // max 15 pts
-  score -= data.disputes * 15;                             // penalty per dispute
+  score += Math.min(data.savingsGoalsCompleted * 8, 30);
+  score += Math.min(data.onTimeDeposits * 2, 20);
+  score += Math.min(data.collaborativeVaults * 5, 25);
+  score += Math.min(data.accountAgeMonths * 1, 15);
+  score -= data.disputes * 15;
   return Math.max(0, Math.min(100, Math.round(score)));
 }
 
-export function updateTrustScore(
-  patch: Partial<Omit<TrustScore, 'score'>>,
-): TrustScore {
-  if (typeof window === 'undefined') return defaultTrustScore();
-  const existing = loadTrustScore();
-  const merged = { ...existing, ...patch };
-  const updated: TrustScore = {
-    ...merged,
-    score: computeTrustScore(merged),
-  };
-  localStorage.setItem(TRUST_KEY, JSON.stringify(updated));
-  return updated;
-}
-
-export function clearTrustScore(): void {
-  if (typeof window === 'undefined') return;
-  localStorage.removeItem(TRUST_KEY);
+export async function updateTrustScore(
+  pubkey: string,
+  patch: Partial<{
+    savingsGoalsCompleted: number;
+    onTimeDeposits: number;
+    collaborativeVaultsCount: number;
+    disputesCount: number;
+  }>
+) {
+  await prisma.user.update({ where: { pubkey }, data: patch });
+  return loadTrustScore(pubkey);
 }
 
 // ─── Feature gates by level ──────────────────────────────────────────────────
+// (unchanged — pure constants, no storage dependency)
 
 export const LEVEL_FEATURES = {
-  0: [
-    'Create personal savings vaults',
-    'Join collaborative vaults (paluwagan)',
-    'Deposit and receive USDC',
-    'View vault balances and progress',
-  ],
   1: [
-    'Higher transaction limits',
-    'Create more and larger collaborative vaults',
-    'Verified badge on your profile',
-    'Build a platform trust score',
+    "Create personal savings vaults",
+    "Join collaborative vaults (paluwagan)",
+    "Deposit and receive USDC",
+    "View vault balances and progress",
   ],
   2: [
-    'Cash out USDC to Philippine Pesos (PHP)',
-    'Withdraw to banks or e-wallets',
-    'Cross-border remittance settlement',
-    'Access to regulated financial products',
+    "Higher transaction limits",
+    "Create more and larger collaborative vaults",
+    "Verified badge on your profile",
+    "Build a platform trust score",
+  ],
+  3: [
+    "Cash out USDC to Philippine Pesos (PHP)",
+    "Withdraw to banks or e-wallets",
+    "Cross-border remittance settlement",
+    "Access to regulated financial products",
   ],
 } as const;
 
-// ─── Level upgrade requirements ──────────────────────────────────────────────
-
 export const LEVEL_REQUIREMENTS = {
-  0: ['PIN authentication', 'Display name or nickname', 'Accept Terms of Service'],
-  1: [
-    'Verified mobile number',
-    'One of: School ID, Employer ID, Barangay Certificate, or Community Endorsement',
-    'Selfie with liveness detection',
-  ],
+  1: ["PIN authentication", "Display name or nickname", "Accept Terms of Service"],
   2: [
-    'Government-issued ID',
-    'Selfie / liveness verification',
-    'Complete KYC through a licensed partner (e.g. PeraHub, Coins.ph)',
+    "Verified mobile number",
+    "One of: School ID, Employer ID, Barangay Certificate, or Community Endorsement",
+    "Selfie with liveness detection",
+  ],
+  3: [
+    "Complete at least 2 collaborative vaults",
+    "10+ on-time contributions",
+    "No disputes or fraud reports",
+    "Account active for 3+ months",
   ],
 } as const;
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
-/** Returns true if the user can access a feature gated at `requiredLevel` */
-export function canAccess(requiredLevel: VerificationLevel): boolean {
-  return getVerificationLevel() >= requiredLevel;
+export async function canAccess(pubkey: string, requiredLevel: VerificationLevel): Promise<boolean> {
+  const level = await getVerificationLevel(pubkey);
+  return level >= requiredLevel;
 }
 
-/** Clear all auth-related local storage (use on full logout) */
-export function clearAllAuthData(): void {
-  clearProfile();
-  clearTrustScore();
+export interface Level2SubmissionPayload {
+  alternativeIdType?:
+    | "school_id"
+    | "employer_id"
+    | "cooperative_id"
+    | "barangay_cert"
+    | "endorsement";
+  idNumber?: string;
+  endorsementCode?: string;
+  email?: string;
+  selfieCaptured: boolean;
+}
+
+export async function submitLevel2Verification(
+  pubkey: string,
+  payload: Level2SubmissionPayload
+) {
+  return prisma.user.update({
+    where: { pubkey },
+    data: {
+      email: payload.email || undefined,
+      alternativeIdType: payload.alternativeIdType,
+      alternativeIdNumber:
+        payload.alternativeIdType === "endorsement" ? undefined : payload.idNumber,
+      endorsementCode:
+        payload.alternativeIdType === "endorsement" ? payload.endorsementCode : undefined,
+    },
+  });
+}
+
+// ─── Level 3 eligibility ──────────────────────────────────────────────────
+
+export async function checkLevel3Eligibility(pubkey: string) {
+  const user = await prisma.user.findUnique({ where: { pubkey } });
+  if (!user) return { eligible: false, reasons: ["User not found"] };
+
+  const accountAgeMonths = Math.floor(
+    (Date.now() - user.createdAt.getTime()) / (1000 * 60 * 60 * 24 * 30)
+  );
+
+  const checks = {
+    hasCompletedVaults: user.collaborativeVaultsCount >= 2,
+    hasOnTimeHistory: user.onTimeDeposits >= 10,
+    noDisputes: user.disputesCount === 0,
+    hasAccountAge: accountAgeMonths >= 3,
+    hasVerificationLevel2: user.verificationLevel >= 2,
+  };
+
+  const eligible = Object.values(checks).every(Boolean);
+  const reasons = Object.entries(checks)
+    .filter(([, passed]) => !passed)
+    .map(([key]) => key);
+
+  return { eligible, checks, reasons, accountAgeMonths };
+}
+
+export async function attemptLevel3Upgrade(pubkey: string) {
+  const result = await checkLevel3Eligibility(pubkey);
+  if (!result.eligible) {
+    return { ok: false as const, ...result };
+  }
+  await prisma.user.update({ where: { pubkey }, data: { verificationLevel: 3 } });
+  return { ok: true as const, ...result };
 }
