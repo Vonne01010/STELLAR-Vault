@@ -199,23 +199,35 @@ export default function SavingsDashboard({ publicKey, wallet, onLogout, headerAc
   useEffect(() => {
     if (!configured) return;
     let ignore = false;
-    setLoading(true);
-    readSavingsState()
-      .then(next => { if (!ignore) setState(next); })
-      .finally(() => { if (!ignore) setLoading(false); });
+    const loadState = async () => {
+      setLoading(true);
+      try {
+        const next = await readSavingsState();
+        if (!ignore) setState(next);
+      } finally {
+        if (!ignore) setLoading(false);
+      }
+    };
+    loadState();
     return () => { ignore = true; };
   }, [configured]);
 
   useEffect(() => {
     let ignore = false;
-    if (!publicKey) { setHistory([]); return; }
+    if (!publicKey) {
+      queueMicrotask(() => { if (!ignore) setHistory([]); });
+      return () => { ignore = true; };
+    }
     loadHistory(publicKey).then(data => { if (!ignore) setHistory(data); });
     return () => { ignore = true; };
   }, [publicKey]);
 
   useEffect(() => {
     let ignore = false;
-    if (!publicKey) { setWalletBalances(null); return; }
+    if (!publicKey) {
+      queueMicrotask(() => { if (!ignore) setWalletBalances(null); });
+      return () => { ignore = true; };
+    }
     fetchBalances(publicKey)
       .then(b => { if (!ignore) setWalletBalances(b); })
       .catch(() => { if (!ignore) setWalletBalances(null); });
@@ -224,18 +236,27 @@ export default function SavingsDashboard({ publicKey, wallet, onLogout, headerAc
 
   useEffect(() => {
     let ignore = false;
-    if (!publicKey) { setVaultSummary(null); return; }
-    queueMicrotask(() => { if (!ignore) void loadVaultSummary(publicKey); });
+    if (!publicKey) {
+      queueMicrotask(() => { if (!ignore) setVaultSummary(null); });
+    } else {
+      queueMicrotask(() => { if (!ignore) void loadVaultSummary(publicKey); });
+    }
     return () => { ignore = true; };
   }, [loadVaultSummary, publicKey]);
 
   useEffect(() => subscribeToTransferState(() => setTransferState(getTransferState())), []);
 
   useEffect(() => {
+    let ignore = false;
     if (panel !== 'send' || sendMode !== 'qr') {
-      setScanError('');
-      setScannedOk(false);
+      queueMicrotask(() => {
+        if (!ignore) {
+          setScanError('');
+          setScannedOk(false);
+        }
+      });
     }
+    return () => { ignore = true; };
   }, [panel, sendMode]);
 
   useEffect(() => {
@@ -538,7 +559,7 @@ const handleVoidPendingApproval = async (id: string) => {
               {panel === 'send' && (
                 <SendPanel
                   publicKey={publicKey} sendMode={sendMode} onSendModeChange={setSendMode}
-                  pendingApprovals={pendingApprovals} recipient={recipient} onRecipientChange={setRecipient}
+                  pendingApproval={pendingApprovals[0] ?? null} recipient={recipient} onRecipientChange={setRecipient}
                   transferAmount={transferAmount} onTransferAmountChange={setTransferAmount}
                   busy={busy} onTransferRequest={handleTransferRequest}
                   onApproveAsSender={handleApproveAsSender} onApproveAsReceiver={handleApproveAsReceiver}
