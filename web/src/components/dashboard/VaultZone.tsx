@@ -5,6 +5,7 @@ import Image from 'next/image';
 import VaultCore from '@/components/dashboard/VaultCore';
 import { EyeIcon, DepositIcon, WithdrawIcon, CreateIcon } from '@/app/icons';
 import type { Panel } from '@/lib/dashboardTypes';
+import { useSwipeX } from '@/lib/useSwipeX';
 
 interface VaultZoneProps {
   loading: boolean;
@@ -20,6 +21,8 @@ interface VaultZoneProps {
   targetLabel?: string;
   members?: { id: string; initial: string; color?: string }[];
   onViewVaultDetails?: () => void;
+  /** Swipe the balance card left to jump to the Wallet zone. */
+  onSwipeToWallet?: () => void;
 }
 
 function ChevronLeftIcon({ className }: { className?: string }) {
@@ -56,8 +59,10 @@ export default function VaultZone({
   targetLabel,
   members,
   onViewVaultDetails,
+  onSwipeToWallet,
 }: VaultZoneProps) {
   const isPanelOpen = panel === 'deposit' || panel === 'withdraw' || panel === 'create';
+  const swipeHandlers = useSwipeX(onSwipeToWallet, undefined);
 
   return (
     <div className="mx-6 mt-6 space-y-5">
@@ -91,7 +96,10 @@ export default function VaultZone({
         </div>
       ) : (
         <>
-          <div className="p-6 rounded-3xl bg-linear-to-br from-[#FFB238] via-[#FF9F1C] to-[#F37A00] text-white shadow-[0_18px_30px_-14px_rgba(230,80,0,0.40)] relative overflow-hidden animate-fadeIn">
+          <div
+            {...swipeHandlers}
+            className="p-6 rounded-3xl bg-linear-to-br from-[#FFB238] via-[#FF9F1C] to-[#F37A00] text-white shadow-[0_18px_30px_-14px_rgba(230,80,0,0.40)] relative overflow-hidden animate-fadeIn touch-pan-y"
+          >
             <Image
               src="/safeIcon.png"
               alt=""

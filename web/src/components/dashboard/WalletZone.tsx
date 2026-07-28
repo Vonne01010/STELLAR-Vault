@@ -4,6 +4,7 @@ import React from 'react';
 import { EyeIcon, SendIcon, ReceiveIcon } from '@/app/icons';
 import type { Panel } from '@/lib/dashboardTypes';
 import type { HistoryEntry } from '@/lib/history';
+import { useSwipeX } from '@/lib/useSwipeX';
 
 interface WalletZoneProps {
   loading: boolean;
@@ -15,6 +16,8 @@ interface WalletZoneProps {
   setPanel: (panel: Panel) => void;
   history: HistoryEntry[];
   onSeeAllActivity: () => void;
+  /** Swipe the balance card right to jump back to the Vault zone. */
+  onSwipeToVault?: () => void;
 }
 
 function ChevronLeftIcon({ className }: { className?: string }) {
@@ -35,8 +38,10 @@ export default function WalletZone({
   setPanel,
   history,
   onSeeAllActivity,
+  onSwipeToVault,
 }: WalletZoneProps) {
   const isPanelOpen = panel === 'send' || panel === 'receive';
+  const swipeHandlers = useSwipeX(undefined, onSwipeToVault);
 
   return (
     <div className="mx-6 mt-6 space-y-5">
@@ -74,7 +79,10 @@ export default function WalletZone({
         </div>
       ) : (
         <>
-          <div className="p-6 rounded-3xl bg-linear-to-br from-cyan-400 via-cyan-500 to-blue-600 text-white shadow-[0_18px_30px_-14px_rgba(8,145,178,0.40)] relative overflow-hidden animate-fadeIn">
+          <div
+            {...swipeHandlers}
+            className="p-6 rounded-3xl bg-linear-to-br from-cyan-400 via-cyan-500 to-blue-600 text-white shadow-[0_18px_30px_-14px_rgba(8,145,178,0.40)] relative overflow-hidden animate-fadeIn touch-pan-y"
+          >
             <svg
               aria-hidden="true"
               viewBox="0 0 24 24"
