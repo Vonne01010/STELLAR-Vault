@@ -70,7 +70,7 @@ export default function History({ history, loading, onRefresh, onSelectVault }: 
         </button>
       </div>
       
-      <div className="space-y-3 max-h-[520px] overflow-y-auto pr-1">
+      <div className="space-y-3 max-h-130 overflow-y-auto pr-1">
         {history.length === 0 ? (
           <p className="p-6 rounded-3xl bg-white border border-slate-200/60 text-xs font-normal text-slate-400 text-center shadow-md shadow-slate-900/5">
             No localized network block events recorded on this public key.

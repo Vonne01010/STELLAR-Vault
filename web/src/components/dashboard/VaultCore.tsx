@@ -75,7 +75,7 @@ function VaultDoorCore({
       </svg>
 
       {/* Vault door rivets, sit just inside the ring */}
-      <svg className="absolute w-[184px] h-[184px]" viewBox="0 0 184 184">
+      <svg className="absolute w-46 h-46" viewBox="0 0 184 184">
         {[...Array(rivetCount)].map((_, i) => {
           const angle = (i / rivetCount) * 2 * Math.PI;
           const x = 92 + 84 * Math.cos(angle);
