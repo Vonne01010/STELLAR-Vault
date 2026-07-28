@@ -7,6 +7,7 @@ import { CONTRACT_ID } from '@/lib/stellar';
 import { authFetch, signWithCurrentAccount, walletService } from '@/lib/wallet';
 import { createAppNotification } from '@/lib/notifications';
 import { recordHistoryEntry } from '@/lib/history';
+import { PersonalIcon, CollaborativeIcon, SparkleIcon } from '@/app/icons';
 
 type Status = 'idle' | 'building' | 'signing' | 'submitting' | 'confirming' | 'saving' | 'success' | 'error';
 
@@ -49,33 +50,6 @@ function WaveAnimation() {
         .wave-layer-front { animation: wave-slide-front 5.5s linear infinite reverse; }
       `}</style>
     </div>
-  );
-}
-
-function SparkleIcon({ className }: { className?: string }) {
-  return (
-    <svg className={className} viewBox="0 0 24 24" fill="currentColor">
-      <path d="M12 2c.6 3.2 1.4 5.2 2.4 6.2 1 1 3 1.8 6.2 2.4-3.2.6-5.2 1.4-6.2 2.4-1 1-1.8 3-2.4 6.2-.6-3.2-1.4-5.2-2.4-6.2-1-1-3-1.8-6.2-2.4 3.2-.6 5.2-1.4 6.2-2.4C10.6 7.2 11.4 5.2 12 2z" />
-    </svg>
-  );
-}
-
-function PersonalIcon({ className }: { className?: string }) {
-  return (
-    <svg className={className} fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-      <circle cx="12" cy="8" r="4" />
-      <path strokeLinecap="round" d="M4 20c0-3.5 3.5-6 8-6s8 2.5 8 6" />
-    </svg>
-  );
-}
-
-function CollaborativeIcon({ className }: { className?: string }) {
-  return (
-    <svg className={className} fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-      <circle cx="8" cy="9" r="3" />
-      <circle cx="16" cy="9" r="3" />
-      <path strokeLinecap="round" d="M2 20c0-3 2.7-5 6-5s6 2 6 5M10 20c0-3 2.7-5 6-5s6 2 6 5" />
-    </svg>
   );
 }
 
@@ -356,7 +330,7 @@ export default function CreateVault({
             inputMode="numeric"
             value={pinInput}
             onChange={(e) => setPinInput(e.target.value)}
-            placeholder="••••"
+            placeholder="••••••"
             disabled={unlocking}
             className="w-full rounded-xl bg-white border border-slate-100 px-3.5 py-2.5 text-xs text-slate-800 outline-none focus:border-[#A0F0F0] disabled:opacity-50"
           />
