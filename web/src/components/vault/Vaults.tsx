@@ -63,29 +63,29 @@ export default function Vaults({
   const cardRefs = useRef<Map<string, HTMLDivElement>>(new Map());
 
   useEffect(() => {
-  if (!focusVaultId || (owned.length === 0 && joined.length === 0)) return;
+    if (!focusVaultId || (owned.length === 0 && joined.length === 0)) return;
 
-  const inOwned = owned.some((v) => v.id === focusVaultId);
-  const inJoined = joined.some((v) => v.id === focusVaultId);
+    const inOwned = owned.some((v) => v.id === focusVaultId);
+    const inJoined = joined.some((v) => v.id === focusVaultId);
 
-  if (!inOwned && !inJoined) {
-    onFocusVaultNotFound?.(); 
-    onFocusHandled?.();
-    return;
-  }
+    if (!inOwned && !inJoined) {
+      onFocusVaultNotFound?.(); 
+      onFocusHandled?.();
+      return;
+    }
 
-  window.setTimeout(() => {
-    setSubTab(inOwned ? 'owned' : 'joined');
-  }, 0);
+    window.setTimeout(() => {
+      setSubTab(inOwned ? 'owned' : 'joined');
+    }, 0);
 
-  const timeout = window.setTimeout(() => {
-    const el = cardRefs.current.get(focusVaultId);
-    el?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-    onFocusHandled?.();
-  }, 50);
+    const timeout = window.setTimeout(() => {
+      const el = cardRefs.current.get(focusVaultId);
+      el?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      onFocusHandled?.();
+    }, 50);
 
-  return () => window.clearTimeout(timeout);
-}, [focusVaultId, owned, joined, onFocusHandled, onFocusVaultNotFound]);
+    return () => window.clearTimeout(timeout);
+  }, [focusVaultId, owned, joined, onFocusHandled, onFocusVaultNotFound]);
 
   const isLoading = loading || parentLoading;
   const activeList = subTab === 'owned' ? owned : joined;
@@ -167,7 +167,8 @@ export default function Vaults({
             </svg>
           </div>
 
-          <div className="space-y-3 max-h-150 overflow-y-auto pr-1">
+          {/* List Container with scrollbar hidden & horizontal overflow disabled */}
+          <div className="space-y-3 max-h-150 overflow-y-auto overflow-x-hidden scrollbar-none [&::-webkit-scrollbar]:hidden">
             {isLoading && !hasLoadedOnce ? (
               <p className="p-6 rounded-3xl bg-white border border-slate-200/60 text-xs font-normal text-slate-400 text-center shadow-md shadow-slate-900/5">
                 Loading…
