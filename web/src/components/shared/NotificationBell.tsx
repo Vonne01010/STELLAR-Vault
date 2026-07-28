@@ -4,6 +4,7 @@ import {
   fetchNotifications,
   markNotificationRead,
   markAllNotificationsRead,
+  clearNotifications,
   type AppNotification,
 } from '@/lib/notifications';
 import NotificationsPanel from '@/components/dashboard/NotificationsPanel';
@@ -90,6 +91,15 @@ export default function NotificationBell({
     }
   };
 
+  const handleClearAll = async () => {
+    setNotifications([]);
+    try {
+      await clearNotifications();
+    } catch {
+      void refresh();
+    }
+  };
+
   const handleNotificationClick = async (n: AppNotification) => {
     if (!n.read) {
       await handleMarkRead(n.id);
@@ -129,6 +139,7 @@ export default function NotificationBell({
           loading={loading}
           unreadCount={unreadCount}
           onMarkAllRead={handleMarkAllRead}
+          onClearAll={handleClearAll}
           onNotificationClick={handleNotificationClick}
         />
       )}
