@@ -14,9 +14,8 @@ Users can create personal or community-driven "smart vaults" to lock away stable
 - Stellar Asset Contract (SAC): Utilizes native USDC on Stellar out of the box to guarantee hyper-low transaction fees, lightning-fast settlement, and immediate exposure to stable USD values.
 - Stellar Compliance & Anchor Architecture (SEP-24/SEP-6): Keeps the contract layer purely permissionless and No-KYC at entry, while shifting regulatory compliance entirely to the edge. Users interact freely on-chain in USD, but complete standard KYC checks only when interacting with regulated local off-ramps (like PeraHub or Coins.ph) to cash out into physical Philippine Peso (PHP) fiat.
 
-
 ## Track
-Track 2: Financial Inclusion & Everyday Payments (Secondary alignment with Track 3: DeFi, Stablecoins & Real-World Assets)
+Category 2: Financial Inclusion & Underbanked 
 
 ## Tech Stack
 - Framework: Next.js 16 (App Router) / React 19 / TypeScript 5
