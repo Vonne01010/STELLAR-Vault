@@ -96,4 +96,4 @@ npm run lint
 - Vonne Chelsea Reese A. Sumbeling — @Vonne01010
 
 ## License
-Proprietary — All Rights Reserved. Unauthorized copying, distribution, or use of this software, in whole or in part, is strictly prohibited without prior written permission.
+MIT License

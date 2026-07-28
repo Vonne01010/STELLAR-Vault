@@ -36,7 +36,7 @@ export default function RecoverPage() {
 
         <div className="flex flex-col items-center space-y-4 pt-12">
           <span className="text-[10px] font-normal text-slate-400 tracking-normal">
-            © 2026 Team Ada's Lovelies. All rights reserved.
+            © 2026 Solaria Innovations. All rights reserved.
           </span>
         </div>
       </div>
