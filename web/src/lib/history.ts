@@ -16,6 +16,7 @@ export interface HistoryEntry {
   source: 'local' | 'horizon';
   hash?: string;
   status: 'confirmed' | 'pending' | 'failed';
+  vaultId?: string;
 }
 
 const storageKey = 'stella-vault.transaction-history';

@@ -5,6 +5,7 @@ import {
   markNotificationRead,
   markAllNotificationsRead,
   clearNotifications,
+  deleteNotifications,
   type AppNotification,
 } from '@/lib/notifications';
 import NotificationsPanel from '@/components/dashboard/NotificationsPanel';
@@ -30,6 +31,8 @@ export default function NotificationBell({
   const [open, setOpen] = useState(false);
   const [notifications, setNotifications] = useState<AppNotification[]>([]);
   const [loading, setLoading] = useState(false);
+  const [selectionMode, setSelectionMode] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const containerRef = useRef<HTMLDivElement>(null);
 
   const refresh = useCallback(async () => {
@@ -69,6 +72,17 @@ export default function NotificationBell({
 
   const unreadCount = notifications.filter((n) => !n.read).length;
 
+  const resetSelection = useCallback(() => {
+    setSelectionMode(false);
+    setSelectedIds([]);
+  }, []);
+
+  useEffect(() => {
+    if (!open && (selectionMode || selectedIds.length > 0)) {
+      resetSelection();
+    }
+  }, [open, resetSelection, selectionMode, selectedIds.length]);
+
   const handleOpen = () => {
     setOpen((prev) => !prev);
   };
@@ -95,6 +109,29 @@ export default function NotificationBell({
     setNotifications([]);
     try {
       await clearNotifications();
+    } catch {
+      void refresh();
+    }
+  };
+
+  const handleToggleSelection = (id: string) => {
+    setSelectionMode(true);
+    setSelectedIds((prev) => (prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id]));
+  };
+
+  const handleLongPressNotification = (n: AppNotification) => {
+    handleToggleSelection(n.id);
+  };
+
+  const handleDeleteSelected = async () => {
+    if (selectedIds.length === 0) return;
+
+    const idsToDelete = [...selectedIds];
+    setNotifications((prev) => prev.filter((notification) => !idsToDelete.includes(notification.id)));
+    resetSelection();
+
+    try {
+      await deleteNotifications(idsToDelete);
     } catch {
       void refresh();
     }
@@ -138,8 +175,14 @@ export default function NotificationBell({
           notifications={notifications}
           loading={loading}
           unreadCount={unreadCount}
+          selectionMode={selectionMode}
+          selectedIds={selectedIds}
           onMarkAllRead={handleMarkAllRead}
           onClearAll={handleClearAll}
+          onDeleteSelected={handleDeleteSelected}
+          onCancelSelection={resetSelection}
+          onToggleSelection={handleToggleSelection}
+          onLongPressNotification={handleLongPressNotification}
           onNotificationClick={handleNotificationClick}
         />
       )}

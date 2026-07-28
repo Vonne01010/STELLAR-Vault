@@ -133,6 +133,7 @@ export default function CreateVault({
         source: 'local',
         hash,
         status: 'confirmed',
+          vaultId: data.id,
       });
       onCreated(data.id);
 

@@ -120,10 +120,40 @@ export default function SavingsDashboard({ publicKey, wallet, onLogout, headerAc
   const [vaultsCount, setVaultsCount] = useState<number>(0);
   const [focusVaultId, setFocusVaultId] = useState<string | null>(null);
 
-  const navigateToVault = (vaultId: string) => {
+  const navigateToVault = (vaultId?: string | null) => {
     setActiveTab('vaults');
+    if (!vaultId) {
+      setFocusVaultId(null);
+      return;
+    }
+
     setFocusVaultId(vaultId);
     setTimeout(() => setFocusVaultId((current) => (current === vaultId ? null : current)), 4000);
+  };
+
+  const handleHistorySelection = (entry: HistoryEntry) => {
+    if (entry.kind === 'send' || entry.kind === 'receive') {
+      setActiveTab('home');
+      setHomeZone('wallet');
+      setPanel(null);
+      return;
+    }
+
+    if (entry.kind === 'deposit' || entry.kind === 'withdraw') {
+      setActiveTab('home');
+      setHomeZone('vault');
+      setPanel(null);
+      return;
+    }
+
+    if (entry.kind === 'vault_create' && entry.vaultId) {
+      navigateToVault(entry.vaultId);
+      return;
+    }
+
+    setActiveTab('home');
+    setHomeZone('vault');
+    setPanel(null);
   };
 
   // Form & Action states
@@ -517,7 +547,7 @@ export default function SavingsDashboard({ publicKey, wallet, onLogout, headerAc
           )}
 
           {/* Core Tabs Views */}
-          {activeTab === 'activity' && <div className="pt-8"><History history={history} loading={loading} onRefresh={refresh} onSelectVault={navigateToVault} /></div>}
+          {activeTab === 'activity' && <div className="pt-8"><History history={history} loading={loading} onRefresh={refresh} onSelectEntry={handleHistorySelection} /></div>}
           
           {activeTab === 'profile' && (
             <div className="pt-8">
@@ -535,7 +565,14 @@ export default function SavingsDashboard({ publicKey, wallet, onLogout, headerAc
           
           {activeTab === 'vaults' && (
             <div className="pt-8">
-              <Vaults publicKey={publicKey} loading={loading} onWalletChanged={refresh} focusVaultId={focusVaultId} onFocusHandled={() => setFocusVaultId(null)} />
+              <Vaults
+                publicKey={publicKey}
+                loading={loading}
+                onWalletChanged={refresh}
+                focusVaultId={focusVaultId}
+                onFocusHandled={() => setFocusVaultId(null)}
+                onFocusVaultNotFound={() => showToast('This vault is no longer available.', 'error')}
+              />
             </div>
           )}
         </div>
