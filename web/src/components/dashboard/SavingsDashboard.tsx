@@ -24,6 +24,7 @@ import {
 } from '@/lib/transfer';
 import { loadHistory, type HistoryEntry } from '@/lib/history';
 import { BudgetProvider } from '@/lib/budgets';
+import { useSwipeX } from '@/lib/useSwipeX';
 
 // Component Imports
 import NavBar, { AppTab } from './NavBar';
@@ -100,6 +101,14 @@ export default function SavingsDashboard({ publicKey, wallet, onLogout, headerAc
   const [homeZone, setHomeZone] = useState<'vault' | 'wallet'>('vault');
   const [panel, setPanel] = useState<Panel>(null);
   const [activeTab, setActiveTab] = useState<AppTab>('home');
+
+  const TAB_ORDER: AppTab[] = ['home', 'vaults', 'tracker', 'activity', 'profile'];
+  const changePageTab = (direction: 1 | -1) => {
+    const idx = TAB_ORDER.indexOf(activeTab);
+    const next = idx + direction;
+    if (next >= 0 && next < TAB_ORDER.length) setActiveTab(TAB_ORDER[next]);
+  };
+  const pageSwipe = useSwipeX(() => changePageTab(1), () => changePageTab(-1));
   const [busy, setBusy] = useState(false);
   const [transferState, setTransferState] = useState(getTransferState());
   const [history, setHistory] = useState<HistoryEntry[]>([]);
@@ -368,7 +377,7 @@ export default function SavingsDashboard({ publicKey, wallet, onLogout, headerAc
     <BudgetProvider history={history}>
       <div className="max-w-md mx-auto min-h-210 bg-[#fffdfb] rounded-[2.5rem] overflow-hidden shadow-xl relative flex flex-col justify-between font-sans tracking-tight border border-slate-200/40 text-[#1A1A1A]">
         
-        <div className="flex-1 pb-36 overflow-y-auto">
+        <div {...pageSwipe} className="flex-1 pb-36 overflow-y-auto touch-pan-y">
           {activeTab === 'home' && (
             <div className="px-6 pt-7 flex items-center justify-between gap-1">
               <div className="flex items-center gap-1">

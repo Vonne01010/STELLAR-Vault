@@ -59,7 +59,7 @@ export default function WalletZone({
           </button>
           <span
             className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 mt-0.5 ${
-              panel === 'send' ? 'bg-amber-50 text-[#FF9F1C]' : 'bg-cyan-50 text-cyan-500'
+              panel === 'send' ? 'bg-cyan-50 text-cyan-500' : 'bg-cyan-50 text-cyan-500'
             }`}
           >
             {panel === 'send' ? <SendIcon className="w-4 h-4" /> : <ReceiveIcon className="w-4 h-4" />}

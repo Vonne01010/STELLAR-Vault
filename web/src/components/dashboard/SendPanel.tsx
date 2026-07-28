@@ -112,7 +112,7 @@ export default function SendPanel({
                     type="button"
                     onClick={onTransferRequest}
                     disabled={busy || !recipient || !transferAmount || Number(transferAmount) <= 0}
-                    className="w-full py-3.5 rounded-xl bg-linear-to-r from-[#FF9F1C] to-[#F37A00] text-white text-xs font-bold uppercase tracking-widest hover:opacity-95 transition-opacity disabled:opacity-40 shadow-sm shadow-orange-900/10"
+                    className="w-full py-3.5 rounded-xl bg-linear-to-r from-cyan-400 to-cyan-600 text-white text-xs font-bold uppercase tracking-widest hover:opacity-95 transition-opacity disabled:opacity-40 shadow-sm shadow-cyan-900/10"
                   >
                     {busy ? 'Sending Request…' : 'Send'}
                   </button>
@@ -157,7 +157,7 @@ export default function SendPanel({
                           pendingApproval.senderAuthorized
                             ? 'bg-[#00A3A3] border-[#00A3A3] text-white'
                             : pendingApproval.sender === publicKey
-                              ? 'bg-white border-[#FF9F1C] text-[#FF9F1C] animate-pulse'
+                              ? 'bg-white border-cyan-400 text-cyan-500 animate-pulse'
                               : 'bg-white border-slate-200 text-slate-300'
                         }`}
                       >
@@ -187,7 +187,7 @@ export default function SendPanel({
                           pendingApproval.receiverAuthorized
                             ? 'bg-[#00A3A3] border-[#00A3A3] text-white'
                             : pendingApproval.recipient === publicKey
-                              ? 'bg-white border-[#FF9F1C] text-[#FF9F1C] animate-pulse'
+                              ? 'bg-white border-cyan-400 text-cyan-500 animate-pulse'
                               : 'bg-white border-slate-200 text-slate-300'
                         }`}
                       >
@@ -215,7 +215,7 @@ export default function SendPanel({
                       <div
                         className={`w-8 h-8 rounded-full flex items-center justify-center border-2 transition-colors ${
                           pendingApproval.senderAuthorized && pendingApproval.receiverAuthorized
-                            ? 'bg-white border-[#FF9F1C] text-[#FF9F1C]'
+                            ? 'bg-white border-cyan-400 text-cyan-500'
                             : 'bg-white border-slate-200 text-slate-300'
                         }`}
                       >
@@ -227,17 +227,17 @@ export default function SendPanel({
 
                   <div className="flex gap-2 pt-1">
                     {pendingApproval.sender === publicKey && !pendingApproval.senderAuthorized && (
-                      <button type="button" onClick={onApproveAsSender} disabled={busy} className="flex-1 py-2.5 rounded-xl bg-linear-to-r from-[#FF9F1C] to-[#F37A00] text-white text-[11px] font-bold uppercase tracking-wide disabled:opacity-50">
+                      <button type="button" onClick={onApproveAsSender} disabled={busy} className="flex-1 py-2.5 rounded-xl bg-linear-to-r from-cyan-400 to-cyan-600 text-white text-[11px] font-bold uppercase tracking-wide disabled:opacity-50">
                         Confirm Transaction
                       </button>
                     )}
                     {pendingApproval.recipient === publicKey && !pendingApproval.receiverAuthorized && (
-                      <button type="button" onClick={onApproveAsReceiver} disabled={busy} className="flex-1 py-2.5 rounded-xl bg-linear-to-r from-[#FF9F1C] to-[#F37A00] text-white text-[11px] font-bold uppercase tracking-wide disabled:opacity-50">
+                      <button type="button" onClick={onApproveAsReceiver} disabled={busy} className="flex-1 py-2.5 rounded-xl bg-linear-to-r from-cyan-400 to-cyan-600 text-white text-[11px] font-bold uppercase tracking-wide disabled:opacity-50">
                         Accept Transaction
                       </button>
                     )}
                     {pendingApproval.sender === publicKey && pendingApproval.senderAuthorized && pendingApproval.receiverAuthorized && (
-                      <button type="button" onClick={onSubmitApprovedTransfer} disabled={busy} className="flex-1 py-2.5 rounded-xl bg-linear-to-r from-[#FF9F1C] to-[#F37A00] text-white text-[11px] font-bold uppercase tracking-wide disabled:opacity-50">
+                      <button type="button" onClick={onSubmitApprovedTransfer} disabled={busy} className="flex-1 py-2.5 rounded-xl bg-linear-to-r from-cyan-400 to-cyan-600 text-white text-[11px] font-bold uppercase tracking-wide disabled:opacity-50">
                         {busy ? 'Processing…' : 'Send'}
                       </button>
                     )}
@@ -265,7 +265,7 @@ export default function SendPanel({
                 </p>
               )}
               {scannedOk && (
-                <p className="flex items-center gap-1.5 text-[11px] text-emerald-700 font-semibold bg-emerald-50 border border-emerald-100 rounded-full px-3 py-1.5">
+                <p className="flex items-center gap-1.5 text-[11px] text-cyan-700 font-semibold bg-cyan-50 border border-cyan-100 rounded-full px-3 py-1.5">
                   <SparkleStar className="w-3 h-3" />
                   Address captured
                 </p>

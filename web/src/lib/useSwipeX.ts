@@ -8,16 +8,35 @@ import { useRef } from 'react';
  * A vertical drag (e.g. someone scrolling the page starting on this
  * element) is ignored — it only fires when horizontal movement dominates.
  */
-export function useSwipeX(onSwipeLeft?: () => void, onSwipeRight?: () => void, threshold = 48) {
+export function useSwipeX(
+  onSwipeLeft?: () => void,
+  onSwipeRight?: () => void,
+  threshold = 48,
+  capture = true
+) {
   const startX = useRef<number | null>(null);
   const startY = useRef<number | null>(null);
   const dragging = useRef(false);
+  const ignoreSwipe = useRef(false);
+
+  const isInteractiveTarget = (target: EventTarget | null) => {
+    if (!(target instanceof Element)) return false;
+
+    return target.closest('button, a, input, textarea, select, summary, [role="button"], [data-swipe-ignore]') !== null;
+  };
 
   const onPointerDown = (e: React.PointerEvent) => {
+    if (isInteractiveTarget(e.target)) {
+      ignoreSwipe.current = true;
+      return;
+    }
+
+    ignoreSwipe.current = false;
     startX.current = e.clientX;
     startY.current = e.clientY;
     dragging.current = true;
-    e.currentTarget.setPointerCapture(e.pointerId);
+    if (capture) e.currentTarget.setPointerCapture(e.pointerId);
+    e.stopPropagation();
   };
 
   const finish = (clientX: number, clientY: number) => {
@@ -33,9 +52,18 @@ export function useSwipeX(onSwipeLeft?: () => void, onSwipeRight?: () => void, t
     else onSwipeRight?.();
   };
 
-  const onPointerUp = (e: React.PointerEvent) => finish(e.clientX, e.clientY);
+  const onPointerUp = (e: React.PointerEvent) => {
+    if (ignoreSwipe.current) {
+      ignoreSwipe.current = false;
+      return;
+    }
+
+    e.stopPropagation();
+    finish(e.clientX, e.clientY);
+  };
 
   const onPointerCancel = () => {
+    ignoreSwipe.current = false;
     dragging.current = false;
     startX.current = null;
     startY.current = null;
