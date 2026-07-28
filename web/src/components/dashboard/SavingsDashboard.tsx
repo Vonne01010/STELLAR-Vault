@@ -120,8 +120,13 @@ export default function SavingsDashboard({ publicKey, wallet, onLogout, headerAc
   const [vaultsCount, setVaultsCount] = useState<number>(0);
   const [focusVaultId, setFocusVaultId] = useState<string | null>(null);
 
-  const navigateToVault = (vaultId: string) => {
+  const navigateToVault = (vaultId?: string | null) => {
     setActiveTab('vaults');
+    if (!vaultId) {
+      setFocusVaultId(null);
+      return;
+    }
+
     setFocusVaultId(vaultId);
     setTimeout(() => setFocusVaultId((current) => (current === vaultId ? null : current)), 4000);
   };
@@ -535,7 +540,14 @@ export default function SavingsDashboard({ publicKey, wallet, onLogout, headerAc
           
           {activeTab === 'vaults' && (
             <div className="pt-8">
-              <Vaults publicKey={publicKey} loading={loading} onWalletChanged={refresh} focusVaultId={focusVaultId} onFocusHandled={() => setFocusVaultId(null)} />
+              <Vaults
+                publicKey={publicKey}
+                loading={loading}
+                onWalletChanged={refresh}
+                focusVaultId={focusVaultId}
+                onFocusHandled={() => setFocusVaultId(null)}
+                onFocusVaultNotFound={() => showToast('This vault is no longer available.', 'error')}
+              />
             </div>
           )}
         </div>

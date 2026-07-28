@@ -4,22 +4,11 @@ import React from 'react';
 import { type HistoryEntry } from '@/lib/history';
 import { RefreshIcon } from '@/app/icons';
 
-/**
- * HistoryEntry doesn't currently carry a vaultId in the type we have
- * visibility into — this widens it optionally so vault-creation rows can
- * redirect if the field is present, without assuming it exists or breaking
- * if it doesn't. If `lib/history.ts` doesn't populate this yet, add it to
- * whatever writes vault-creation history entries and this starts working
- * with no further changes here.
- */
-type HistoryEntryWithVault = HistoryEntry & { vaultId?: string };
-
 interface HistoryProps {
   history: HistoryEntry[];
   loading: boolean;
   onRefresh: () => void;
-  /** Called when a vault-creation entry is tapped and a vaultId is available. */
-  onSelectVault?: (vaultId: string) => void;
+  onSelectVault?: (vaultId?: string | null) => void;
 }
 
 function entryVisual(kind: string) {
@@ -36,25 +25,11 @@ function entryVisual(kind: string) {
 }
 
 export default function History({ history, loading, onRefresh, onSelectVault }: HistoryProps) {
-  // Determine state color based on activity and actions needed
   const getIconColorClass = () => {
     if (loading) return 'text-cyan-500 animate-spin';
-    if (history.length === 0) return 'text-orange-500'; // Needs action / empty warning
-    return 'text-slate-400'; // Inactive / resting
+    if (history.length === 0) return 'text-orange-500';
+    return 'text-slate-400';
   };
-
-  const handleEntryClick = (entry: HistoryEntryWithVault) => {
-    if (entry.kind === 'vault_create' && entry.vaultId && onSelectVault) {
-      onSelectVault(entry.vaultId);
-      return;
-    }
-    if (entry.hash) {
-      window.open(`https://stellar.expert/explorer/testnet/tx/${entry.hash}`, '_blank', 'noopener,noreferrer');
-    }
-  };
-
-  const isClickable = (entry: HistoryEntryWithVault) =>
-    (entry.kind === 'vault_create' && !!entry.vaultId && !!onSelectVault) || !!entry.hash;
 
   return (
     <div className="px-6 py-2 space-y-6 animate-fade-in">
@@ -78,13 +53,24 @@ export default function History({ history, loading, onRefresh, onSelectVault }: 
         ) : (
           history.map((entry) => {
             const v = entryVisual(entry.kind);
-            const clickable = isClickable(entry);
+            const isClickable = Boolean(onSelectVault);
+            const handleClick = () => {
+              if (isClickable) {
+                onSelectVault?.(entry.vaultId ?? null);
+              }
+            };
+
             return (
-              <div
+              <button
                 key={entry.id}
-                onClick={clickable ? () => handleEntryClick(entry) : undefined}
-                className={`p-6 rounded-3xl bg-white border border-slate-200/60 shadow-md shadow-slate-900/5 flex items-center gap-4 transition-colors ${
-                  clickable ? 'cursor-pointer hover:border-slate-300 hover:bg-slate-50/60' : ''
+                type="button"
+                onClick={handleClick}
+                onPointerDown={(event) => event.stopPropagation()}
+                onPointerUp={(event) => event.stopPropagation()}
+                onMouseDown={(event) => event.stopPropagation()}
+                onTouchStart={(event) => event.stopPropagation()}
+                className={`w-full p-6 rounded-3xl bg-white border border-slate-200/60 shadow-md shadow-slate-900/5 flex items-center gap-4 text-left ${
+                  isClickable ? 'cursor-pointer hover:border-slate-300 transition-colors' : 'cursor-default'
                 }`}
               >
                 <div className={`w-10 h-10 rounded-full ${v.bg} ${v.fg} flex items-center justify-center shrink-0 font-bold shadow-inner text-sm`}>
@@ -101,7 +87,7 @@ export default function History({ history, loading, onRefresh, onSelectVault }: 
                     {new Date(entry.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                   </p>
                 </div>
-              </div>
+              </button>
             );
           })
         )}

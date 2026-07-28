@@ -12,6 +12,7 @@ export default function Vaults({
   onWalletChanged,
   focusVaultId,
   onFocusHandled,
+  onFocusVaultNotFound
 }: VaultsProps) {
   const [subTab, setSubTab] = useState<VaultSubTab>('owned');
   const [owned, setOwned] = useState<VaultData[]>([]);
@@ -62,28 +63,29 @@ export default function Vaults({
   const cardRefs = useRef<Map<string, HTMLDivElement>>(new Map());
 
   useEffect(() => {
-    if (!focusVaultId || (owned.length === 0 && joined.length === 0)) return;
+  if (!focusVaultId || (owned.length === 0 && joined.length === 0)) return;
 
-    const inOwned = owned.some((v) => v.id === focusVaultId);
-    const inJoined = joined.some((v) => v.id === focusVaultId);
+  const inOwned = owned.some((v) => v.id === focusVaultId);
+  const inJoined = joined.some((v) => v.id === focusVaultId);
 
-    if (!inOwned && !inJoined) {
-      onFocusHandled?.();
-      return;
-    }
+  if (!inOwned && !inJoined) {
+    onFocusVaultNotFound?.(); 
+    onFocusHandled?.();
+    return;
+  }
 
-    window.setTimeout(() => {
-      setSubTab(inOwned ? 'owned' : 'joined');
-    }, 0);
+  window.setTimeout(() => {
+    setSubTab(inOwned ? 'owned' : 'joined');
+  }, 0);
 
-    const timeout = window.setTimeout(() => {
-      const el = cardRefs.current.get(focusVaultId);
-      el?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-      onFocusHandled?.();
-    }, 50);
+  const timeout = window.setTimeout(() => {
+    const el = cardRefs.current.get(focusVaultId);
+    el?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    onFocusHandled?.();
+  }, 50);
 
-    return () => window.clearTimeout(timeout);
-  }, [focusVaultId, owned, joined, onFocusHandled]);
+  return () => window.clearTimeout(timeout);
+}, [focusVaultId, owned, joined, onFocusHandled, onFocusVaultNotFound]);
 
   const isLoading = loading || parentLoading;
   const activeList = subTab === 'owned' ? owned : joined;

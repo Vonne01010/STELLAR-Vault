@@ -19,6 +19,7 @@ export interface VaultsProps {
   onWalletChanged?: () => void | Promise<void>;
   focusVaultId?: string | null;
   onFocusHandled?: () => void;
+  onFocusVaultNotFound?: () => void;
 }
 
 export interface VaultMemberRow {
