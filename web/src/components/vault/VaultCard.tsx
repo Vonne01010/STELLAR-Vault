@@ -258,7 +258,11 @@ export default function VaultCard({ vault, onChanged, isOwned, highlighted, publ
         <div className="grid grid-cols-2 gap-2 pt-1">
           <button
             onClick={() => openAction('deposit')}
-            className="py-2.5 rounded-xl bg-[#FF9F1C] text-white text-xs font-semibold hover:bg-[#FF8C00] active:scale-95 transition-all"
+            className={`py-2.5 rounded-xl active:scale-95 transition-all ${
+              isCollab
+                ? ' bg-cyan-400 text-white text-xs font-semibold hover:bg-cyan-500'
+                : ' bg-[#FF9F1C] text-white text-xs font-semibold hover:bg-[#FF8C00]'
+            }`}
           >
             Contribute
           </button>
