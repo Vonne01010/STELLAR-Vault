@@ -15,6 +15,7 @@ interface VaultZoneProps {
   walletUsdcBalance: number;
   panel: Panel;
   setPanel: (panel: Panel) => void;
+  hasVault: boolean;
   goalProgress?: number;
   vaultLevel?: number;
   vaultName?: string;
@@ -53,8 +54,9 @@ export default function VaultZone({
   walletUsdcBalance,
   panel,
   setPanel,
+  hasVault,
   goalProgress = 0,
-  vaultLevel = 0,
+  vaultLevel,
   vaultName,
   targetLabel,
   members,
@@ -148,12 +150,14 @@ export default function VaultZone({
       {!isPanelOpen && (
         <div className="mt-8 mb-6 flex flex-col items-center animate-fadeIn">
           <VaultCore
+            hasVault={hasVault}
             goalProgress={goalProgress}
             vaultLevel={vaultLevel}
             vaultName={vaultName}
             targetLabel={targetLabel}
             members={members}
             onViewDetails={onViewVaultDetails}
+            onCreateVault={() => setPanel('create')}
           />
         </div>
       )}

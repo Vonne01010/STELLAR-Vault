@@ -11,6 +11,35 @@ import { DotsIcon } from '@/app/icons';
 import VaultManagePanel from './VaultManagePanel';
 import { SESSION_KEY_MISSING_MESSAGE, type VaultData, type MoneyAction } from './types';
 
+/** Same two-layer wave motif used on CreateVault's live preview, reused here so a
+ *  saved vault card reads as part of the same visual family as creating one. */
+function WaveAnimation() {
+  return (
+    <div className="absolute inset-x-0 bottom-0 h-14 overflow-hidden pointer-events-none select-none">
+      <svg className="absolute bottom-0 left-0 w-[200%] h-full wave-layer-back" viewBox="0 0 1200 120" preserveAspectRatio="none">
+        <path d="M0,50 C150,90 350,10 600,50 C850,90 1050,10 1200,50 L1200,120 L0,120 Z" fill="rgba(255,255,255,0.10)" />
+      </svg>
+      <svg className="absolute bottom-0 left-0 w-[200%] h-full wave-layer-front" viewBox="0 0 1200 120" preserveAspectRatio="none">
+        <path d="M0,65 C200,25 400,95 600,65 C800,35 1000,95 1200,65 L1200,120 L0,120 Z" fill="rgba(255,255,255,0.16)" />
+      </svg>
+      <style jsx>{`
+        @keyframes wave-slide-back { from { transform: translateX(0); } to { transform: translateX(-50%); } }
+        @keyframes wave-slide-front { from { transform: translateX(0); } to { transform: translateX(-50%); } }
+        .wave-layer-back { animation: wave-slide-back 9s linear infinite; }
+        .wave-layer-front { animation: wave-slide-front 5.5s linear infinite reverse; }
+      `}</style>
+    </div>
+  );
+}
+
+function SparkleIcon({ className }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="currentColor">
+      <path d="M12 2c.6 3.2 1.4 5.2 2.4 6.2 1 1 3 1.8 6.2 2.4-3.2.6-5.2 1.4-6.2 2.4-1 1-1.8 3-2.4 6.2-.6-3.2-1.4-5.2-2.4-6.2-1-1-3-1.8-6.2-2.4 3.2-.6 5.2-1.4 6.2-2.4C10.6 7.2 11.4 5.2 12 2z" />
+    </svg>
+  );
+}
+
 interface VaultCardProps {
   vault: VaultData;
   onChanged: () => void;
@@ -155,54 +184,74 @@ export default function VaultCard({ vault, onChanged, isOwned, highlighted, publ
 
   const withdrawDisabled = vault.vaultType !== 'Personal' || !vault.withdrawable;
   const isMemberOnly = !isOwned && vault.vaultType === 'Collaborative';
+  const isCollab = vault.vaultType === 'Collaborative';
 
   return (
     <div
-      className={`p-5 rounded-2xl bg-white border space-y-3 transition-all duration-700 ${
+      className={`rounded-2xl bg-white overflow-hidden border border-slate-200/70 transition-all duration-700 ${
         showHighlight
-          ? 'border-[#FF9F1C] ring-2 ring-[#FF9F1C]/40'
-          : 'border-slate-100 shadow-[0_2px_10px_-6px_rgba(15,23,42,0.08)]'
+          ? 'ring-2 ring-[#FF9F1C]/40'
+          : 'shadow-[0_8px_24px_-10px_rgba(15,23,42,0.18)]'
       }`}
     >
-      <div className="flex items-start justify-between gap-3">
-        <div className="min-w-0">
-          <h4 className="text-sm font-semibold text-slate-800 truncate">{vault.name}</h4>
-          <p className="flex items-center gap-1.5 text-[11px] text-slate-400 mt-0.5">
-            <span>{vault.vaultType}</span>
-            <span className="w-0.5 h-0.5 rounded-full bg-slate-300" />
-            <span className={vault.status === 'Active' ? 'text-emerald-500 font-medium' : 'text-slate-400'}>
-              {vault.status}
+      {/* Hero header — same wave/sparkle motif used on CreateVault's live preview,
+          so a saved vault reads as part of the same visual family as creating one. */}
+      <div
+        className={`p-4 text-white relative overflow-hidden transition-colors duration-300 ${
+          isCollab
+            ? 'bg-linear-to-br from-cyan-400 via-cyan-500 to-blue-600 shadow-[0_12px_20px_-14px_rgba(8,145,178,0.45)]'
+            : 'bg-linear-to-br from-[#FFB238] via-[#FF9F1C] to-[#F37A00] shadow-[0_12px_20px_-14px_rgba(230,80,0,0.45)]'
+        }`}
+      >
+        <SparkleIcon className="absolute top-3 right-4 w-3 h-3 text-white/70" />
+        <SparkleIcon className="absolute top-7 right-11 w-1.5 h-1.5 text-white/40" />
+        <SparkleIcon className="absolute bottom-9 right-6 w-2 h-2 text-white/50" />
+        <WaveAnimation />
+
+        <div className="relative z-10 flex items-start justify-between gap-3">
+          <div className="min-w-0 space-y-0.5">
+            <span className="text-[10px] tracking-[0.14em] uppercase font-semibold text-white/80">
+              {vault.vaultType}
             </span>
-          </p>
+            <h4 className="text-base font-semibold tracking-tight leading-snug truncate">{vault.name}</h4>
+          </div>
+          <button
+            onClick={() => setShowManage((v) => !v)}
+            aria-label="Manage vault"
+            aria-expanded={showManage}
+            className={`w-7 h-7 rounded-full flex items-center justify-center shrink-0 transition-colors ${
+              showManage ? 'bg-white/25 text-white' : 'bg-white/10 text-white/80 hover:bg-white/20 hover:text-white'
+            }`}
+          >
+            <DotsIcon className="w-4 h-4" />
+          </button>
         </div>
-        <button
-          onClick={() => setShowManage((v) => !v)}
-          aria-label="Manage vault"
-          aria-expanded={showManage}
-          className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 transition-colors ${
-            showManage ? 'bg-slate-100 text-slate-700' : 'text-slate-400 hover:bg-slate-50 hover:text-slate-600'
-          }`}
-        >
-          <DotsIcon className="w-4.5 h-4.5" />
-        </button>
+
+        <div className="relative z-10 pt-2.5 space-y-1">
+          <div className="flex items-baseline gap-1.5">
+            <span className="text-lg font-semibold tracking-tight leading-none">
+              {vault.balance.toFixed(2)}
+            </span>
+            <span className="text-[11px] font-medium text-white/75">
+              / {vault.targetAmount.toFixed(2)} USDC
+            </span>
+          </div>
+          <div className="flex justify-between text-[9px] font-medium text-white/70">
+            <span>{progress.toFixed(0)}%</span>
+          </div>
+          <div className="h-1 rounded-full bg-white/25 overflow-hidden">
+            <div
+              className="h-full rounded-full bg-white transition-all"
+              style={{ width: `${progress}%` }}
+            />
+          </div>
+        </div>
       </div>
 
+      <div className="p-4 space-y-2.5">
       {vault.description && (
         <p className="text-xs text-slate-400 font-normal">{vault.description}</p>
       )}
-
-      <div className="space-y-1.5">
-        <div className="flex justify-between text-[11px] font-medium text-slate-500">
-          <span>{vault.balance.toFixed(2)} / {vault.targetAmount.toFixed(2)} USDC</span>
-          <span className="text-slate-400">{progress.toFixed(0)}%</span>
-        </div>
-        <div className="h-1.5 rounded-full bg-slate-100 overflow-hidden">
-          <div
-            className="h-full rounded-full bg-[#FF9F1C] transition-all"
-            style={{ width: `${progress}%` }}
-          />
-        </div>
-      </div>
 
       {/* Contribute / Withdraw entry buttons */}
       {action === null && (
@@ -280,7 +329,7 @@ export default function VaultCard({ vault, onChanged, isOwned, highlighted, publ
             inputMode="numeric"
             value={pinInput}
             onChange={(e) => setPinInput(e.target.value)}
-            placeholder="••••"
+            placeholder="••••••"
             disabled={unlocking}
             className="w-full rounded-xl bg-white border border-slate-100 px-3.5 py-2.5 text-xs text-slate-800 outline-none focus:border-[#A0F0F0] disabled:opacity-50"
           />
@@ -356,6 +405,7 @@ export default function VaultCard({ vault, onChanged, isOwned, highlighted, publ
           </div>
         </div>
       )}
+      </div>
     </div>
   );
 }

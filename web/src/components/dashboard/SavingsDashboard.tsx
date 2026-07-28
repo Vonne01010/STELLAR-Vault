@@ -373,6 +373,9 @@ export default function SavingsDashboard({ publicKey, wallet, onLogout, headerAc
   const totalEquivalentInPhp = walletUsdcBalance * phpRate;
   const purchasingPowerSaved = walletUsdcBalance * (phpRate * 0.06);
 
+  const formatCurrency = (value: number) =>
+    `₱${value.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 })}`;
+
   return (
     <BudgetProvider history={history}>
       <div className="max-w-md mx-auto min-h-210 bg-[#fffdfb] rounded-[2.5rem] overflow-hidden shadow-xl relative flex flex-col justify-between font-sans tracking-tight border border-slate-200/40 text-[#1A1A1A]">
@@ -423,6 +426,12 @@ export default function SavingsDashboard({ publicKey, wallet, onLogout, headerAc
               walletUsdcBalance={walletUsdcBalance}
               panel={panel}
               setPanel={setPanel}
+              goalProgress={vaultSummary?.progress ?? 0}
+              hasVault={vaultsCount > 0}
+              vaultName={vaultSummary?.purpose}
+              targetLabel={vaultSummary ? `${formatCurrency(vaultSummary.balance)} of ${formatCurrency(vaultSummary.goalAmount)}` : undefined}
+              members={vaultSummary ? [{ id: 'self', initial: 'ME', color: 'bg-[#FF9F1C]' }] : []}
+              onViewVaultDetails={() => setActiveTab('vaults')}
               onSwipeToWallet={() => { setHomeZone('wallet'); setPanel(null); }}
             />
           )}
