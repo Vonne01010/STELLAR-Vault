@@ -8,7 +8,7 @@ export default function SendPanel({
   publicKey,
   sendMode,
   onSendModeChange,
-  pendingApprovals,
+  pendingApproval,
   recipient,
   onRecipientChange,
   transferAmount,
@@ -28,7 +28,7 @@ export default function SendPanel({
   publicKey: string | null;
   sendMode: 'amount' | 'qr';
   onSendModeChange: (mode: 'amount' | 'qr') => void;
-  pendingApprovals: PendingTransferApproval[];
+  pendingApproval: PendingTransferApproval | null;
   recipient: string;
   onRecipientChange: (value: string) => void;
   transferAmount: string;
@@ -78,14 +78,13 @@ export default function SendPanel({
                   <div className="space-y-1">
                     <label className="block text-[11px] uppercase tracking-wide text-slate-500 font-semibold">Address</label>
                     <input
-                      type="number"
-                      value={transferAmount}
-                      onChange={(e) => onTransferAmountChange(e.target.value)}
-                      placeholder="0.00"
+                      type="text"
+                      value={recipient}
+                      onChange={(e) => onRecipientChange(e.target.value)}
+                      placeholder="Recipient address"
                       disabled={busy}
                       className="w-full rounded-xl bg-slate-50 border border-slate-100 px-3.5 py-2.5 text-[11px] font-mono text-slate-600 outline-none focus:border-[#A0F0F0] transition-colors placeholder:text-slate-300"
                     />
-                    <span className="absolute right-4 text-[10px] text-slate-400">USDC</span>
                   </div>
                   <div className="space-y-1">
                     <label className="block text-[11px] uppercase tracking-wide text-slate-500 font-semibold">Amount</label>
@@ -118,6 +117,7 @@ export default function SendPanel({
                     {busy ? 'Sending Request…' : 'Send'}
                   </button>
                 </div>
+              )}
 
               {pendingApproval && pendingApproval.sender === publicKey && (
                 <div className="rounded-2xl border border-slate-100 bg-slate-50/50 p-4 space-y-3.5 animate-fadeIn">
@@ -160,24 +160,24 @@ export default function SendPanel({
 
                   <div className="flex gap-2 pt-1">
                     {pendingApproval.sender === publicKey && !pendingApproval.senderAuthorized && (
-                      <button type="button" onClick={onApproveAsSender} disabled={busy} className="flex-1 py-2.5 rounded-xl bg-linear-to-r from-[#FF9F1C] to-[#F37A00] text-white text-[11px] font-bold uppercase tracking-wide disabled:opacity-50">
+                      <button type="button" onClick={() => onApproveAsSender(pendingApproval.id)} disabled={busy} className="flex-1 py-2.5 rounded-xl bg-linear-to-r from-[#FF9F1C] to-[#F37A00] text-white text-[11px] font-bold uppercase tracking-wide disabled:opacity-50">
                         Sign Sender
                       </button>
                     )}
                     {pendingApproval.recipient === publicKey && !pendingApproval.receiverAuthorized && (
-                      <button type="button" onClick={onApproveAsReceiver} disabled={busy} className="flex-1 py-2.5 rounded-xl bg-linear-to-r from-[#FF9F1C] to-[#F37A00] text-white text-[11px] font-bold uppercase tracking-wide disabled:opacity-50">
+                      <button type="button" onClick={() => onApproveAsReceiver(pendingApproval.id)} disabled={busy} className="flex-1 py-2.5 rounded-xl bg-linear-to-r from-[#FF9F1C] to-[#F37A00] text-white text-[11px] font-bold uppercase tracking-wide disabled:opacity-50">
                         Sign Receiver
                       </button>
                     )}
                     {pendingApproval.sender === publicKey && pendingApproval.senderAuthorized && pendingApproval.receiverAuthorized && (
-                      <button type="button" onClick={onSubmitApprovedTransfer} disabled={busy} className="flex-1 py-2.5 rounded-xl bg-linear-to-r from-[#FF9F1C] to-[#F37A00] text-white text-[11px] font-bold uppercase tracking-wide disabled:opacity-50">
+                      <button type="button" onClick={() => onSubmitApprovedTransfer(pendingApproval.id)} disabled={busy} className="flex-1 py-2.5 rounded-xl bg-linear-to-r from-[#FF9F1C] to-[#F37A00] text-white text-[11px] font-bold uppercase tracking-wide disabled:opacity-50">
                         {busy ? 'Processing…' : 'Submit Payload'}
                       </button>
                     )}
                     <button
                       type="button"
                       disabled={busy}
-                      onClick={onVoidPendingApproval}
+                      onClick={() => onVoidPendingApproval(pendingApproval.id)}
                       className="px-3.5 py-2.5 rounded-xl bg-white border border-slate-200 text-slate-500 text-[11px] font-bold uppercase tracking-wide hover:bg-slate-50 disabled:opacity-50"
                     >
                       Void
@@ -188,10 +188,10 @@ export default function SendPanel({
             </>
           ) : (
             <div className="flex flex-col items-center justify-center py-5 bg-slate-50 rounded-2xl border border-dashed border-slate-200 space-y-3 animate-fadeIn">
-              <QRScanner
-                active={sendMode === 'qr' && pendingApprovals.length === 0 && !needsPin}
-                onScan={onQrScanResult}
-              />
+                <QRScanner
+                  active={sendMode === 'qr' && !pendingApproval && !needsPin}
+                  onScan={onQrScanResult}
+                />
               {!scannedOk && !scanError && (
                 <p className="text-[11px] text-slate-400 font-medium text-center px-4">
                   Point your camera at the recipient&apos;s QR code
