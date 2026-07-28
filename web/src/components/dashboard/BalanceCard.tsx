@@ -1,161 +1,135 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 import { EyeIcon } from '@/app/icons';
-import { useSwipeXAnimated } from '@/lib/useSwipeXAnimated';
-
-type Zone = 'vault' | 'wallet';
 
 interface BalanceCardProps {
-  zone: Zone;
+  label: string;
   loading: boolean;
   showBalance: boolean;
   onToggleBalance: () => void;
-  totalEquivalentInPhp: number;
-  walletUsdcBalance: number;
-  /** Fired when the card is swiped left. On the vault card this moves to the wallet. */
-  onSwipeToWallet?: () => void;
-  /** Fired when the card is swiped right. On the wallet card this moves back to the vault. */
-  onSwipeToVault?: () => void;
-  /** Override the default label ("Vault Balance" / "Spendable Balance"). */
-  label?: string;
-  /** Override the default decorative corner artwork. */
-  artwork?: React.ReactNode;
+  phpAmount: number;
+  usdcAmount: number;
+  /** Tailwind gradient + text color classes for the card background. */
+  gradientClassName: string;
+  /** Tailwind shadow classes, kept separate since each zone uses a differently-tinted shadow. */
+  shadowClassName?: string;
+  /** Spread onto the card root — used to attach swipe/drag handlers for zone switching. */
+  swipeProps?: Record<string, unknown>;
+  /** Live horizontal drag offset while swiping. */
+  dragX?: number;
+  /** True while the pointer is actively dragging. */
+  dragging?: boolean;
+  /** True while the card is in its exit animation state. */
+  exiting?: boolean;
 }
 
-const ZONE_STYLES: Record<Zone, { gradient: string; shadow: string; label: string; badge: string }> = {
-  vault: {
-    gradient: 'from-[#FFB238] via-[#FF9F1C] to-[#F37A00]',
-    shadow: 'shadow-[0_18px_30px_-14px_rgba(230,80,0,0.40)]',
-    label: 'Vault Balance',
-    badge: 'bg-white/20',
-  },
-  wallet: {
-    gradient: 'from-cyan-400 via-cyan-500 to-blue-600',
-    shadow: 'shadow-[0_18px_30px_-14px_rgba(8,145,178,0.40)]',
-    label: 'Spendable Balance',
-    badge: 'bg-white/20',
-  },
-};
-
-function VaultArtwork() {
+/** Two offset, differently-timed wave layers create a subtle water motion
+ *  along the card's base instead of a static decorative icon. */
+function WaveAnimation() {
   return (
-    <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" className="absolute right-3 top-1/2 -translate-y-1/2 w-40 h-40 text-white/15 pointer-events-none select-none">
-      <rect x="4" y="4" width="16" height="16" rx="3" stroke="currentColor" strokeWidth="1.2" />
-      <circle cx="12" cy="12" r="4" stroke="currentColor" strokeWidth="1.2" />
-      <circle cx="12" cy="12" r="0.8" fill="currentColor" />
-      <path d="M12 8v1.2M12 14.8V16M8 12h1.2M14.8 12H16" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" />
-    </svg>
-  );
-}
-
-function WalletArtwork() {
-  return (
-    <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" className="absolute right-3 top-1/2 -translate-y-1/2 w-40 h-40 text-white/15 pointer-events-none select-none">
-      <rect x="2" y="6" width="20" height="14" rx="3" stroke="currentColor" strokeWidth="1.2" />
-      <path d="M2 10h20" stroke="currentColor" strokeWidth="1.2" />
-      <circle cx="17" cy="15" r="1.6" fill="currentColor" />
-      <path d="M6 6V5a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v1" stroke="currentColor" strokeWidth="1.2" />
-    </svg>
+    <div className="absolute inset-x-0 bottom-0 h-24 overflow-hidden pointer-events-none select-none">
+      <svg
+        className="absolute bottom-0 left-0 w-[200%] h-full wave-layer-back"
+        viewBox="0 0 1200 120"
+        preserveAspectRatio="none"
+      >
+        <path
+          d="M0,50 C150,90 350,10 600,50 C850,90 1050,10 1200,50 L1200,120 L0,120 Z"
+          fill="rgba(255,255,255,0.10)"
+        />
+      </svg>
+      <svg
+        className="absolute bottom-0 left-0 w-[200%] h-full wave-layer-front"
+        viewBox="0 0 1200 120"
+        preserveAspectRatio="none"
+      >
+        <path
+          d="M0,65 C200,25 400,95 600,65 C800,35 1000,95 1200,65 L1200,120 L0,120 Z"
+          fill="rgba(255,255,255,0.16)"
+        />
+      </svg>
+      <style jsx>{`
+        @keyframes wave-slide-back {
+          from { transform: translateX(0); }
+          to { transform: translateX(-50%); }
+        }
+        @keyframes wave-slide-front {
+          from { transform: translateX(0); }
+          to { transform: translateX(-50%); }
+        }
+        .wave-layer-back {
+          animation: wave-slide-back 9s linear infinite;
+        }
+        .wave-layer-front {
+          animation: wave-slide-front 5.5s linear infinite reverse;
+        }
+      `}</style>
+    </div>
   );
 }
 
 export default function BalanceCard({
-  zone,
+  label,
   loading,
   showBalance,
   onToggleBalance,
-  totalEquivalentInPhp,
-  walletUsdcBalance,
-  onSwipeToWallet,
-  onSwipeToVault,
-  label,
-  artwork,
+  phpAmount,
+  usdcAmount,
+  gradientClassName,
+  shadowClassName = '',
+  swipeProps,
+  dragX = 0,
+  dragging = false,
+  exiting = false,
 }: BalanceCardProps) {
-  const style = ZONE_STYLES[zone];
-
-  const { dragX, dragging, exiting, onPointerDown, onPointerMove, onPointerUp, onPointerCancel } = useSwipeXAnimated(
-    zone === 'vault' ? onSwipeToWallet : undefined,
-    zone === 'wallet' ? onSwipeToVault : undefined
-  );
-
-  // Gentle entrance: the card fades/rises in on mount, which also plays every
-  // time the zone switches since VaultZone/WalletZone mount a fresh card.
-  const [entered, setEntered] = useState(false);
-  useEffect(() => {
-    const raf = requestAnimationFrame(() => setEntered(true));
-    return () => cancelAnimationFrame(raf);
-  }, []);
-
-  // How far through the swipe the drag currently is, used to fade in a directional glow.
-  const dragProgress = Math.min(1, Math.abs(dragX) / 64);
-  const rotation = dragX / 24;
+  const peelRotation = Math.max(-10, Math.min(10, dragX / 22));
+  const peelOffset = dragX;
+  const peelScale = 1 - Math.min(0.12, Math.abs(dragX) / 900);
+  const peelOpacity = exiting ? 0.2 : 1 - Math.min(0.25, Math.abs(dragX) / 700);
+  const peelShadow = dragging ? '0 22px 30px -16px rgba(15, 23, 42, 0.35)' : '0 18px 30px -14px rgba(15, 23, 42, 0.25)';
+  const swipeTransform = `translateX(${peelOffset}px) rotate(${peelRotation}deg) scale(${peelScale})`;
 
   return (
     <div
-      onPointerDown={onPointerDown}
-      onPointerMove={onPointerMove}
-      onPointerUp={onPointerUp}
-      onPointerCancel={onPointerCancel}
-      className="relative touch-pan-y"
-      style={{ perspective: 800 }}
+      {...swipeProps}
+      className={`p-6 rounded-3xl text-white relative overflow-hidden animate-fadeIn touch-none ${gradientClassName} ${shadowClassName}`}
+      style={{
+        transform: swipeTransform,
+        transition: dragging ? 'none' : 'transform 220ms cubic-bezier(0.22, 1, 0.36, 1), box-shadow 220ms ease, opacity 220ms ease',
+        opacity: peelOpacity,
+        boxShadow: peelShadow,
+        willChange: 'transform, opacity, box-shadow',
+      }}
     >
-      {/* Directional glow underneath, hinting at the zone you're swiping toward */}
-      <div
-        className={`absolute inset-0 rounded-3xl bg-linear-to-br ${ZONE_STYLES[zone === 'vault' ? 'wallet' : 'vault'].gradient} pointer-events-none`}
-        style={{
-          opacity: dragX !== 0 ? dragProgress * 0.5 : 0,
-          transform: `scale(${1 + dragProgress * 0.04})`,
-          transition: dragging ? 'none' : 'opacity 0.25s ease, transform 0.25s ease',
-        }}
-      />
+      <WaveAnimation />
 
-      <div
-        className={`p-6 rounded-3xl bg-linear-to-br ${style.gradient} text-white relative overflow-hidden select-none ${style.shadow}`}
-        style={{
-          transform: `translateX(${dragX}px) rotate(${rotation}deg) translateY(${entered ? 0 : 12}px)`,
-          opacity: entered ? (exiting ? Math.max(0, 1 - Math.abs(dragX) / 400) : 1) : 0,
-          transition: dragging
-            ? 'none'
-            : exiting
-            ? `transform ${220}ms cubic-bezier(0.32, 0.72, 0, 1), opacity ${220}ms ease`
-            : 'transform 0.35s cubic-bezier(0.25, 1, 0.5, 1), opacity 0.35s ease',
-          cursor: dragging ? 'grabbing' : 'grab',
-        }}
-      >
-        {artwork ?? (zone === 'vault' ? <VaultArtwork /> : <WalletArtwork />)}
-
-        <div className="space-y-2 relative z-10">
-          <div className="flex items-center justify-between">
-            <span className="text-[11px] tracking-[0.14em] uppercase font-semibold text-white/80">{label ?? style.label}</span>
-          </div>
-
-          <div className="flex items-baseline gap-1.5 mt-3">
-            <span className="text-lg font-semibold text-white/85">₱</span>
-            {loading ? (
-              <h1 className="text-xl font-light text-white/60">Loading…</h1>
-            ) : (
-              <h1 className="text-[2.6rem] font-semibold tracking-tight leading-none">
-                {showBalance
-                  ? totalEquivalentInPhp.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })
-                  : '••••••'}
-              </h1>
-            )}
-            <button
-              onClick={onToggleBalance}
-              className={`w-6 h-6 rounded-full ${style.badge} hover:bg-white/30 flex items-center justify-center transition-colors shrink-0 self-center`}
-              aria-label="Toggle balance visibility"
-            >
-              <EyeIcon className="w-3.5 h-3.5" />
-            </button>
-          </div>
-
-          <span className="text-xs font-medium tracking-wide text-white/80 flex items-center gap-1.5 pt-1">
-            {showBalance
-              ? `≈ ${walletUsdcBalance.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} USDC`
-              : '•••••• USDC'}
-          </span>
+      <div className="space-y-2 relative z-10">
+        <div className="flex items-center justify-between">
+          <span className="text-[11px] tracking-[0.14em] uppercase font-semibold text-white/80">{label}</span>
         </div>
+
+        <div className="flex items-baseline gap-1.5 mt-3">
+          <span className="text-lg font-semibold text-white/85">₱</span>
+          {loading ? (
+            <h1 className="text-xl font-light text-white/60">Loading…</h1>
+          ) : (
+            <h1 className="text-[2.6rem] font-semibold tracking-tight leading-none">
+              {showBalance ? phpAmount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '••••••'}
+            </h1>
+          )}
+          <button
+            onClick={onToggleBalance}
+            className="w-6 h-6 rounded-full bg-white/20 hover:bg-white/30 flex items-center justify-center transition-colors shrink-0 self-center"
+            aria-label="Toggle balance visibility"
+          >
+            <EyeIcon className="w-3.5 h-3.5" />
+          </button>
+        </div>
+
+        <span className="text-xs font-medium tracking-wide text-white/80 flex items-center gap-1.5 pt-1">
+          {showBalance ? `≈ ${usdcAmount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} USDC` : '•••••• USDC'}
+        </span>
       </div>
     </div>
   );

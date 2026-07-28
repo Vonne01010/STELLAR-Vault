@@ -2,6 +2,7 @@
 
 import React from 'react';
 import type { Tab } from '@/lib/dashboardTypes';
+import { useSwipeX } from '@/lib/useSwipeX';
 
 export type AppTab = Tab | 'tracker';
 
@@ -50,8 +51,18 @@ interface NavBarProps {
 export default function NavBar({ activeTab, onTabChange, homeZone = 'vault' }: NavBarProps) {
   const tabs: AppTab[] = ['home', 'vaults', 'tracker', 'activity', 'profile'];
 
+  const changeTab = (direction: 1 | -1) => {
+    const idx = tabs.indexOf(activeTab);
+    const next = idx + direction;
+    if (next >= 0 && next < tabs.length) onTabChange(tabs[next]);
+  };
+  const swipeHandlers = useSwipeX(() => changeTab(1), () => changeTab(-1));
+
   return (
-    <div className="absolute bottom-0 inset-x-0 bg-white/95 backdrop-blur-md border-t border-slate-100 px-4 pt-3 pb-7 flex justify-between items-center z-40">
+    <div
+      {...swipeHandlers}
+      className="absolute bottom-0 inset-x-0 bg-white/95 backdrop-blur-md border-t border-slate-100 px-4 pt-3 pb-7 flex justify-between items-center z-40 touch-pan-y"
+    >
       {tabs.map((tab) => {
         const isSelected = activeTab === tab;
         const isCyan = isSelected && tab === 'home' && homeZone === 'wallet';

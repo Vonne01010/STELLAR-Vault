@@ -35,10 +35,10 @@ export default function SendPanel({
   onTransferAmountChange: (value: string) => void;
   busy: boolean;
   onTransferRequest: () => void;
-  onApproveAsSender: (id: string) => void;
-  onApproveAsReceiver: (id: string) => void;
-  onSubmitApprovedTransfer: (id: string) => void;
-  onVoidPendingApproval: (id: string) => void;
+  onApproveAsSender: () => void;
+  onApproveAsReceiver: () => void;
+  onSubmitApprovedTransfer: () => void;
+  onVoidPendingApproval: () => void;
   needsPin: boolean;
   scannedOk: boolean;
   scanError: string;
@@ -81,7 +81,7 @@ export default function SendPanel({
                       type="text"
                       value={recipient}
                       onChange={(e) => onRecipientChange(e.target.value)}
-                      placeholder="Recipient address"
+                      placeholder="Stellar Public Address (G...)"
                       disabled={busy}
                       className="w-full rounded-xl bg-slate-50 border border-slate-100 px-3.5 py-2.5 text-[11px] font-mono text-slate-600 outline-none focus:border-[#A0F0F0] transition-colors placeholder:text-slate-300"
                     />
@@ -112,7 +112,7 @@ export default function SendPanel({
                     type="button"
                     onClick={onTransferRequest}
                     disabled={busy || !recipient || !transferAmount || Number(transferAmount) <= 0}
-                    className="w-full py-3.5 rounded-xl bg-linear-to-r from-[#FF9F1C] to-[#F37A00] text-white text-xs font-bold uppercase tracking-widest hover:opacity-95 transition-opacity disabled:opacity-40 shadow-sm shadow-orange-900/10"
+                    className="w-full py-3.5 rounded-xl bg-linear-to-r from-cyan-400 to-cyan-600 text-white text-xs font-bold uppercase tracking-widest hover:opacity-95 transition-opacity disabled:opacity-40 shadow-sm shadow-cyan-900/10"
                   >
                     {busy ? 'Sending Request…' : 'Send'}
                   </button>
@@ -122,7 +122,7 @@ export default function SendPanel({
               {pendingApproval && pendingApproval.sender === publicKey && (
                 <div className="rounded-2xl border border-slate-100 bg-slate-50/50 p-4 space-y-3.5 animate-fadeIn">
                   <div className="flex justify-between items-end border-b border-slate-100 pb-3">
-                    <span className="text-[11px] uppercase text-slate-500 font-semibold tracking-wide">Pending Tx</span>
+                    <span className="text-[11px] uppercase text-slate-500 font-semibold tracking-wide">Pending Transaction</span>
                     <div className="text-right">
                       <span className="text-xl font-bold tabular-nums text-slate-800">{pendingApproval.amount} <span className="text-xs font-semibold text-slate-400">USDC</span></span>
                       {phpRate && (
@@ -139,45 +139,112 @@ export default function SendPanel({
 
                   <p className="text-[11px] text-slate-600 font-medium bg-white rounded-lg px-3 py-2.5 border border-slate-100">
                     {pendingApproval.senderAuthorized && pendingApproval.receiverAuthorized
-                      ? 'Both parties approved — ready to submit.'
+                      ? 'Both parties approved. Ready to send.'
                       : pendingApproval.sender === publicKey && !pendingApproval.senderAuthorized
                         ? 'Approve below to authorize this transfer.'
                         : pendingApproval.sender === publicKey
-                          ? "Waiting on the recipient to approve."
+                          ? "Waiting on the recipient to accept."
                           : pendingApproval.recipient === publicKey && !pendingApproval.receiverAuthorized
                             ? 'Approve below to accept this transfer.'
-                            : 'Waiting on the sender to submit.'}
+                            : 'Waiting on the sender to send.'}
                   </p>
 
-                  <div className="grid grid-cols-2 gap-2 text-[10px] tracking-wide text-center uppercase font-bold">
-                    <div className={`p-2 rounded-lg border ${pendingApproval.senderAuthorized ? 'bg-[#E0FBFB] border-[#A0F0F0] text-slate-700' : 'bg-white border-slate-100 text-slate-400'}`}>
-                      Sender {pendingApproval.senderAuthorized ? '✓' : '○'}
+                  <div className="flex items-center gap-2 px-1">
+                    {/* Step 1: Sender */}
+                    <div className="flex flex-col items-center gap-1.5 shrink-0">
+                      <div
+                        className={`w-8 h-8 rounded-full flex items-center justify-center border-2 transition-colors ${
+                          pendingApproval.senderAuthorized
+                            ? 'bg-[#00A3A3] border-[#00A3A3] text-white'
+                            : pendingApproval.sender === publicKey
+                              ? 'bg-white border-cyan-400 text-cyan-500 animate-pulse'
+                              : 'bg-white border-slate-200 text-slate-300'
+                        }`}
+                      >
+                        {pendingApproval.senderAuthorized ? (
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={3} viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                          </svg>
+                        ) : (
+                          <span className="text-[11px] font-bold">1</span>
+                        )}
+                      </div>
+                      <span className="text-[9px] font-bold uppercase tracking-wide text-slate-400">Sender</span>
                     </div>
-                    <div className={`p-2 rounded-lg border ${pendingApproval.receiverAuthorized ? 'bg-[#E0FBFB] border-[#A0F0F0] text-slate-700' : 'bg-white border-slate-100 text-slate-400'}`}>
-                      Receiver {pendingApproval.receiverAuthorized ? '✓' : '○'}
+
+                    {/* Connecting line, fills in once step 1 is done */}
+                    <div className="flex-1 h-0.5 rounded-full bg-slate-100 -mt-4 overflow-hidden">
+                      <div
+                        className="h-full bg-[#00A3A3] transition-all duration-500"
+                        style={{ width: pendingApproval.senderAuthorized ? '100%' : '0%' }}
+                      />
+                    </div>
+
+                    {/* Step 2: Receiver */}
+                    <div className="flex flex-col items-center gap-1.5 shrink-0">
+                      <div
+                        className={`w-8 h-8 rounded-full flex items-center justify-center border-2 transition-colors ${
+                          pendingApproval.receiverAuthorized
+                            ? 'bg-[#00A3A3] border-[#00A3A3] text-white'
+                            : pendingApproval.recipient === publicKey
+                              ? 'bg-white border-cyan-400 text-cyan-500 animate-pulse'
+                              : 'bg-white border-slate-200 text-slate-300'
+                        }`}
+                      >
+                        {pendingApproval.receiverAuthorized ? (
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={3} viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                          </svg>
+                        ) : (
+                          <span className="text-[11px] font-bold">2</span>
+                        )}
+                      </div>
+                      <span className="text-[9px] font-bold uppercase tracking-wide text-slate-400">Receiver</span>
+                    </div>
+
+                    {/* Connecting line to submit, fills once both parties approved */}
+                    <div className="flex-1 h-0.5 rounded-full bg-slate-100 -mt-4 overflow-hidden">
+                      <div
+                        className="h-full bg-[#00A3A3] transition-all duration-500"
+                        style={{ width: pendingApproval.senderAuthorized && pendingApproval.receiverAuthorized ? '100%' : '0%' }}
+                      />
+                    </div>
+
+                    {/* Step 3: Submitted */}
+                    <div className="flex flex-col items-center gap-1.5 shrink-0">
+                      <div
+                        className={`w-8 h-8 rounded-full flex items-center justify-center border-2 transition-colors ${
+                          pendingApproval.senderAuthorized && pendingApproval.receiverAuthorized
+                            ? 'bg-white border-cyan-400 text-cyan-500'
+                            : 'bg-white border-slate-200 text-slate-300'
+                        }`}
+                      >
+                        <span className="text-[11px] font-bold">3</span>
+                      </div>
+                      <span className="text-[9px] font-bold uppercase tracking-wide text-slate-400">Send</span>
                     </div>
                   </div>
 
                   <div className="flex gap-2 pt-1">
                     {pendingApproval.sender === publicKey && !pendingApproval.senderAuthorized && (
-                      <button type="button" onClick={() => onApproveAsSender(pendingApproval.id)} disabled={busy} className="flex-1 py-2.5 rounded-xl bg-linear-to-r from-[#FF9F1C] to-[#F37A00] text-white text-[11px] font-bold uppercase tracking-wide disabled:opacity-50">
-                        Sign Sender
+                      <button type="button" onClick={onApproveAsSender} disabled={busy} className="flex-1 py-2.5 rounded-xl bg-linear-to-r from-cyan-400 to-cyan-600 text-white text-[11px] font-bold uppercase tracking-wide disabled:opacity-50">
+                        Confirm Transaction
                       </button>
                     )}
                     {pendingApproval.recipient === publicKey && !pendingApproval.receiverAuthorized && (
-                      <button type="button" onClick={() => onApproveAsReceiver(pendingApproval.id)} disabled={busy} className="flex-1 py-2.5 rounded-xl bg-linear-to-r from-[#FF9F1C] to-[#F37A00] text-white text-[11px] font-bold uppercase tracking-wide disabled:opacity-50">
-                        Sign Receiver
+                      <button type="button" onClick={onApproveAsReceiver} disabled={busy} className="flex-1 py-2.5 rounded-xl bg-linear-to-r from-cyan-400 to-cyan-600 text-white text-[11px] font-bold uppercase tracking-wide disabled:opacity-50">
+                        Accept Transaction
                       </button>
                     )}
                     {pendingApproval.sender === publicKey && pendingApproval.senderAuthorized && pendingApproval.receiverAuthorized && (
-                      <button type="button" onClick={() => onSubmitApprovedTransfer(pendingApproval.id)} disabled={busy} className="flex-1 py-2.5 rounded-xl bg-linear-to-r from-[#FF9F1C] to-[#F37A00] text-white text-[11px] font-bold uppercase tracking-wide disabled:opacity-50">
-                        {busy ? 'Processing…' : 'Submit Payload'}
+                      <button type="button" onClick={onSubmitApprovedTransfer} disabled={busy} className="flex-1 py-2.5 rounded-xl bg-linear-to-r from-cyan-400 to-cyan-600 text-white text-[11px] font-bold uppercase tracking-wide disabled:opacity-50">
+                        {busy ? 'Processing…' : 'Send'}
                       </button>
                     )}
                     <button
                       type="button"
                       disabled={busy}
-                      onClick={() => onVoidPendingApproval(pendingApproval.id)}
+                      onClick={onVoidPendingApproval}
                       className="px-3.5 py-2.5 rounded-xl bg-white border border-slate-200 text-slate-500 text-[11px] font-bold uppercase tracking-wide hover:bg-slate-50 disabled:opacity-50"
                     >
                       Void
@@ -188,17 +255,17 @@ export default function SendPanel({
             </>
           ) : (
             <div className="flex flex-col items-center justify-center py-5 bg-slate-50 rounded-2xl border border-dashed border-slate-200 space-y-3 animate-fadeIn">
-                <QRScanner
-                  active={sendMode === 'qr' && !pendingApproval && !needsPin}
-                  onScan={onQrScanResult}
-                />
+              <QRScanner
+                active={sendMode === 'qr' && !pendingApproval && !needsPin}
+                onScan={onQrScanResult}
+              />
               {!scannedOk && !scanError && (
                 <p className="text-[11px] text-slate-400 font-medium text-center px-4">
                   Point your camera at the recipient&apos;s QR code
                 </p>
               )}
               {scannedOk && (
-                <p className="flex items-center gap-1.5 text-[11px] text-emerald-700 font-semibold bg-emerald-50 border border-emerald-100 rounded-full px-3 py-1.5">
+                <p className="flex items-center gap-1.5 text-[11px] text-cyan-700 font-semibold bg-cyan-50 border border-cyan-100 rounded-full px-3 py-1.5">
                   <SparkleStar className="w-3 h-3" />
                   Address captured
                 </p>

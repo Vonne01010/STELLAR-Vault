@@ -1,11 +1,11 @@
 'use client';
 
 import React from 'react';
-import Image from 'next/image';
 import VaultCore from '@/components/dashboard/VaultCore';
-import BalanceCard from '@/components/dashboard/BalanceCard';
+import BalanceCard from './BalanceCard';
 import { DepositIcon, WithdrawIcon, CreateIcon } from '@/app/icons';
 import type { Panel } from '@/lib/dashboardTypes';
+import { useSwipeXAnimated } from '@/lib/useSwipeXAnimated';
 
 interface VaultZoneProps {
   loading: boolean;
@@ -53,8 +53,8 @@ export default function VaultZone({
   walletUsdcBalance,
   panel,
   setPanel,
-  goalProgress,
-  vaultLevel,
+  goalProgress = 0,
+  vaultLevel = 0,
   vaultName,
   targetLabel,
   members,
@@ -62,6 +62,7 @@ export default function VaultZone({
   onSwipeToWallet,
 }: VaultZoneProps) {
   const isPanelOpen = panel === 'deposit' || panel === 'withdraw' || panel === 'create';
+  const { dragX, dragging, exiting, ...swipeHandlers } = useSwipeXAnimated(onSwipeToWallet, undefined);
 
   return (
     <div className="mx-6 mt-6 space-y-5">
@@ -96,24 +97,18 @@ export default function VaultZone({
       ) : (
         <>
           <BalanceCard
-            zone="vault"
+            label="Total Balance"
             loading={loading}
             showBalance={showBalance}
             onToggleBalance={onToggleBalance}
-            totalEquivalentInPhp={totalEquivalentInPhp}
-            walletUsdcBalance={walletUsdcBalance}
-            onSwipeToWallet={onSwipeToWallet}
-            label="Total Balance"
-            artwork={
-              <Image
-                src="/safeIcon.png"
-                alt=""
-                aria-hidden="true"
-                width={176}
-                height={176}
-                className="absolute right-6 top-1/2 -translate-y-1/2 w-40 h-40 object-contain pointer-events-none select-none"
-              />
-            }
+            phpAmount={totalEquivalentInPhp}
+            usdcAmount={walletUsdcBalance}
+            gradientClassName="bg-linear-to-br from-[#FFB238] via-[#FF9F1C] to-[#F37A00]"
+            shadowClassName="shadow-[0_18px_30px_-14px_rgba(230,80,0,0.40)]"
+            swipeProps={swipeHandlers}
+            dragX={dragX}
+            dragging={dragging}
+            exiting={exiting}
           />
 
           <div className="grid grid-cols-3 gap-4 px-2">

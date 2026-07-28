@@ -2,9 +2,10 @@
 
 import React from 'react';
 import { SendIcon, ReceiveIcon } from '@/app/icons';
-import BalanceCard from '@/components/dashboard/BalanceCard';
 import type { Panel } from '@/lib/dashboardTypes';
 import type { HistoryEntry } from '@/lib/history';
+import { useSwipeXAnimated } from '@/lib/useSwipeXAnimated';
+import BalanceCard from './BalanceCard';
 
 interface WalletZoneProps {
   loading: boolean;
@@ -41,6 +42,7 @@ export default function WalletZone({
   onSwipeToVault,
 }: WalletZoneProps) {
   const isPanelOpen = panel === 'send' || panel === 'receive';
+  const { dragX, dragging, exiting, ...swipeHandlers } = useSwipeXAnimated(undefined, onSwipeToVault);
 
   return (
     <div className="mx-6 mt-6 space-y-5">
@@ -57,7 +59,7 @@ export default function WalletZone({
           </button>
           <span
             className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 mt-0.5 ${
-              panel === 'send' ? 'bg-amber-50 text-[#FF9F1C]' : 'bg-cyan-50 text-cyan-500'
+              panel === 'send' ? 'bg-cyan-50 text-cyan-500' : 'bg-cyan-50 text-cyan-500'
             }`}
           >
             {panel === 'send' ? <SendIcon className="w-4 h-4" /> : <ReceiveIcon className="w-4 h-4" />}
@@ -79,13 +81,18 @@ export default function WalletZone({
       ) : (
         <>
           <BalanceCard
-            zone="wallet"
+            label="Spendable Balance"
             loading={loading}
             showBalance={showBalance}
             onToggleBalance={onToggleBalance}
-            totalEquivalentInPhp={totalEquivalentInPhp}
-            walletUsdcBalance={walletUsdcBalance}
-            onSwipeToVault={onSwipeToVault}
+            phpAmount={totalEquivalentInPhp}
+            usdcAmount={walletUsdcBalance}
+            gradientClassName="bg-linear-to-br from-cyan-400 via-cyan-500 to-blue-600"
+            shadowClassName="shadow-[0_18px_30px_-14px_rgba(8,145,178,0.40)]"
+            swipeProps={swipeHandlers}
+            dragX={dragX}
+            dragging={dragging}
+            exiting={exiting}
           />
 
           <div className="grid grid-cols-2 gap-4 px-2">
