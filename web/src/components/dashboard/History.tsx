@@ -8,7 +8,7 @@ interface HistoryProps {
   history: HistoryEntry[];
   loading: boolean;
   onRefresh: () => void;
-  onSelectVault?: (vaultId?: string | null) => void;
+  onSelectEntry?: (entry: HistoryEntry) => void;
 }
 
 function entryVisual(kind: string) {
@@ -24,7 +24,7 @@ function entryVisual(kind: string) {
   }
 }
 
-export default function History({ history, loading, onRefresh, onSelectVault }: HistoryProps) {
+export default function History({ history, loading, onRefresh, onSelectEntry }: HistoryProps) {
   const getIconColorClass = () => {
     if (loading) return 'text-cyan-500 animate-spin';
     if (history.length === 0) return 'text-orange-500';
@@ -53,10 +53,10 @@ export default function History({ history, loading, onRefresh, onSelectVault }: 
         ) : (
           history.map((entry) => {
             const v = entryVisual(entry.kind);
-            const isClickable = Boolean(onSelectVault);
+            const isClickable = Boolean(onSelectEntry);
             const handleClick = () => {
               if (isClickable) {
-                onSelectVault?.(entry.vaultId ?? null);
+                onSelectEntry?.(entry);
               }
             };
 

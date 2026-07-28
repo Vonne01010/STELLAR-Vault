@@ -131,6 +131,31 @@ export default function SavingsDashboard({ publicKey, wallet, onLogout, headerAc
     setTimeout(() => setFocusVaultId((current) => (current === vaultId ? null : current)), 4000);
   };
 
+  const handleHistorySelection = (entry: HistoryEntry) => {
+    if (entry.kind === 'send' || entry.kind === 'receive') {
+      setActiveTab('home');
+      setHomeZone('wallet');
+      setPanel(null);
+      return;
+    }
+
+    if (entry.kind === 'deposit' || entry.kind === 'withdraw') {
+      setActiveTab('home');
+      setHomeZone('vault');
+      setPanel(null);
+      return;
+    }
+
+    if (entry.kind === 'vault_create' && entry.vaultId) {
+      navigateToVault(entry.vaultId);
+      return;
+    }
+
+    setActiveTab('home');
+    setHomeZone('vault');
+    setPanel(null);
+  };
+
   // Form & Action states
   const [depositAmount, setDepositAmount] = useState('250');
   const [withdrawAmount, setWithdrawAmount] = useState('50');
@@ -522,7 +547,7 @@ export default function SavingsDashboard({ publicKey, wallet, onLogout, headerAc
           )}
 
           {/* Core Tabs Views */}
-          {activeTab === 'activity' && <div className="pt-8"><History history={history} loading={loading} onRefresh={refresh} onSelectVault={navigateToVault} /></div>}
+          {activeTab === 'activity' && <div className="pt-8"><History history={history} loading={loading} onRefresh={refresh} onSelectEntry={handleHistorySelection} /></div>}
           
           {activeTab === 'profile' && (
             <div className="pt-8">
