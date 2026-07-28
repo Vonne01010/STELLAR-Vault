@@ -122,7 +122,7 @@ export default function SendPanel({
               {pendingApproval && pendingApproval.sender === publicKey && (
                 <div className="rounded-2xl border border-slate-100 bg-slate-50/50 p-4 space-y-3.5 animate-fadeIn">
                   <div className="flex justify-between items-end border-b border-slate-100 pb-3">
-                    <span className="text-[11px] uppercase text-slate-500 font-semibold tracking-wide">Pending Tx</span>
+                    <span className="text-[11px] uppercase text-slate-500 font-semibold tracking-wide">Pending Transaction</span>
                     <div className="text-right">
                       <span className="text-xl font-bold tabular-nums text-slate-800">{pendingApproval.amount} <span className="text-xs font-semibold text-slate-400">USDC</span></span>
                       {phpRate && (
