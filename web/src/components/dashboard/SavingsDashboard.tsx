@@ -31,7 +31,6 @@ import NavBar, { AppTab } from './NavBar';
 import VaultZone from './VaultZone';
 import WalletZone from './WalletZone';
 import History from '@/components/dashboard/History';
-import MoneyTracker from '@/components/tracker/MoneyTracker';
 import Profile from '@/components/profile/Profile';
 import Vaults from '@/components/vault/Vaults';
 import CreateVault from '@/components/vault/CreateVault';
@@ -102,7 +101,7 @@ export default function SavingsDashboard({ publicKey, wallet, onLogout, headerAc
   const [panel, setPanel] = useState<Panel>(null);
   const [activeTab, setActiveTab] = useState<AppTab>('home');
 
-  const TAB_ORDER: AppTab[] = ['home', 'vaults', 'tracker', 'activity', 'profile'];
+  const TAB_ORDER: AppTab[] = ['home', 'vaults', 'activity', 'profile'];
   const changePageTab = (direction: 1 | -1) => {
     const idx = TAB_ORDER.indexOf(activeTab);
     const next = idx + direction;
@@ -560,8 +559,6 @@ export default function SavingsDashboard({ publicKey, wallet, onLogout, headerAc
               />
             </div>
           )}
-          
-          {activeTab === 'tracker' && <div className="pt-8"><MoneyTracker history={history} loading={loading} onRefresh={refresh} /></div>}
           
           {activeTab === 'vaults' && (
             <div className="pt-8">

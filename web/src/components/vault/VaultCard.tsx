@@ -5,14 +5,12 @@ import { submitSignedXDR, pollTransaction } from '@/lib/payment';
 import { depositUSDC, withdrawUSDC } from '@/lib/transfer';
 import { buildDistributeXDR } from '@/lib/contract';
 import { createAppNotification } from '@/lib/notifications';
+import { useSwipeY } from '@/lib/useSwipeY';
 import InviteMemberModal from '@/components/vault/InviteMemberModal';
 import PendingConfirmations from '@/components/vault/PendingConfirmations';
-import { DotsIcon } from '@/app/icons';
 import VaultManagePanel from './VaultManagePanel';
 import { SESSION_KEY_MISSING_MESSAGE, type VaultData, type MoneyAction } from './types';
 
-/** Same two-layer wave motif used on CreateVault's live preview, reused here so a
- *  saved vault card reads as part of the same visual family as creating one. */
 function WaveAnimation() {
   return (
     <div className="absolute inset-x-0 bottom-0 h-14 overflow-hidden pointer-events-none select-none">
@@ -70,13 +68,31 @@ export default function VaultCard({ vault, onChanged, isOwned, highlighted, publ
   const [distributing, setDistributing] = useState(false);
   const [distributeError, setDistributeError] = useState('');
 
+  const closeAction = () => {
+    setAction(null);
+    setBusy(false);
+    setNeedsPin(false);
+  };
+
+  const {
+    expand,
+    cardStyle,
+    cardShadowClass,
+    pillClass,
+    drawerContainerClass,
+    drawerContentClass,
+    swipeHandlers,
+  } = useSwipeY({
+    onSwipeDown: () => {
+      closeAction();
+      setShowManage(false);
+      setShowInvite(false);
+    },
+  });
+
   useEffect(() => {
     if (!highlighted) return;
-
-    const timeoutId = window.setTimeout(() => {
-      setShowHighlight(false);
-    }, 2500);
-
+    const timeoutId = window.setTimeout(() => setShowHighlight(false), 2500);
     return () => window.clearTimeout(timeoutId);
   }, [highlighted]);
 
@@ -87,12 +103,12 @@ export default function VaultCard({ vault, onChanged, isOwned, highlighted, publ
     setNeedsPin(false);
     setPinInput('');
     setPinError('');
+    expand();
   };
 
-  const closeAction = () => {
-    setAction(null);
-    setBusy(false);
-    setNeedsPin(false);
+  const openInviteModal = () => {
+    setShowInvite(true);
+    expand();
   };
 
   const runAction = async () => {
@@ -102,9 +118,7 @@ export default function VaultCard({ vault, onChanged, isOwned, highlighted, publ
     try {
       const fn = action === 'deposit' ? depositUSDC : withdrawUSDC;
       await fn(amount, vault.onChainVaultId, vault.id, {
-        onCompleted: async () => {
-          onChanged();
-        },
+        onCompleted: async () => onChanged(),
       });
       closeAction();
     } catch (e: unknown) {
@@ -126,42 +140,24 @@ export default function VaultCard({ vault, onChanged, isOwned, highlighted, publ
       const xdr = await buildDistributeXDR(vault.ownerPubkey, vault.onChainVaultId);
       const signedXdr = await signWithCurrentAccount(xdr);
       await createAppNotification({
-        message: 'Distribution transaction submitted to the blockchain.',
+        message: 'Distribution transaction submitted.',
         vaultId: vault.id,
         variant: 'info',
-        meta: { event: 'transaction_submitted', operation: 'distribute', timestamp: new Date().toISOString() },
+        meta: { event: 'transaction_submitted', operation: 'distribute' },
       }).catch(() => undefined);
+      
       const hash = await submitSignedXDR(signedXdr);
       await pollTransaction(hash);
 
       const eventRes = await authFetch(`/api/vaults/${vault.id}/events`, {
         method: 'POST',
-        body: JSON.stringify({
-          eventType: 'distribution_completed',
-          totalAmount: vault.balance,
-        }),
+        body: JSON.stringify({ eventType: 'distribution_completed', totalAmount: vault.balance }),
       });
-      const eventData = await eventRes.json().catch(() => null);
-      if (!eventRes.ok) {
-        throw new Error(eventData?.error ?? 'Vault balance sync failed after distribution');
-      }
-
-      await createAppNotification({
-        message: 'Distribution transaction confirmed on-chain.',
-        vaultId: vault.id,
-        variant: 'success',
-        meta: { event: 'transaction_confirmed', operation: 'distribute', hash, timestamp: new Date().toISOString() },
-      }).catch(() => undefined);
+      
+      if (!eventRes.ok) throw new Error('Vault balance sync failed');
       onChanged();
     } catch (e: unknown) {
-      const message = e instanceof Error ? e.message : 'Distribution failed';
-      await createAppNotification({
-        message: `Distribution failed: ${message}`,
-        vaultId: vault.id,
-        variant: 'error',
-        meta: { event: 'transaction_failed', operation: 'distribute', error: message, timestamp: new Date().toISOString() },
-      }).catch(() => undefined);
-      setDistributeError(message);
+      setDistributeError(e instanceof Error ? e.message : 'Distribution failed');
     } finally {
       setDistributing(false);
     }
@@ -187,224 +183,234 @@ export default function VaultCard({ vault, onChanged, isOwned, highlighted, publ
   const isCollab = vault.vaultType === 'Collaborative';
 
   return (
-    <div
-      className={`rounded-2xl bg-white overflow-hidden border border-slate-200/70 transition-all duration-700 ${
-        showHighlight
-          ? 'ring-2 ring-[#FF9F1C]/40'
-          : 'shadow-[0_8px_24px_-10px_rgba(15,23,42,0.18)]'
-      }`}
-    >
-      {/* Hero header — same wave/sparkle motif used on CreateVault's live preview,
-          so a saved vault reads as part of the same visual family as creating one. */}
-      <div
-        className={`p-4 text-white relative overflow-hidden transition-colors duration-300 ${
-          isCollab
-            ? 'bg-linear-to-br from-cyan-400 via-cyan-500 to-blue-600 shadow-[0_12px_20px_-14px_rgba(8,145,178,0.45)]'
-            : 'bg-linear-to-br from-[#FFB238] via-[#FF9F1C] to-[#F37A00] shadow-[0_12px_20px_-14px_rgba(230,80,0,0.45)]'
-        }`}
-      >
-        <SparkleIcon className="absolute top-3 right-4 w-3 h-3 text-white/70" />
-        <SparkleIcon className="absolute top-7 right-11 w-1.5 h-1.5 text-white/40" />
-        <SparkleIcon className="absolute bottom-9 right-6 w-2 h-2 text-white/50" />
-        <WaveAnimation />
+    <div className="py-1 isolate">
+      <div className={`relative ${showHighlight ? 'ring-2 ring-[#FF9F1C]/40 rounded-2xl' : ''}`}>
+        
+        {/* TOP COLORED CARD DECK */}
+        <div
+          {...swipeHandlers}
+          style={cardStyle}
+          className={`p-4 text-white relative z-20 rounded-2xl overflow-hidden cursor-grab active:cursor-grabbing select-none transition-shadow duration-300 ${cardShadowClass} ${
+            isCollab
+              ? 'bg-linear-to-br from-cyan-400 via-cyan-500 to-blue-600'
+              : 'bg-linear-to-br from-[#FFB238] via-[#FF9F1C] to-[#F37A00]'
+          }`}
+        >
+          <SparkleIcon className="absolute top-3 right-4 w-3 h-3 text-white/70 pointer-events-none" />
+          <SparkleIcon className="absolute top-7 right-11 w-1.5 h-1.5 text-white/40 pointer-events-none" />
+          <SparkleIcon className="absolute bottom-9 right-6 w-2 h-2 text-white/50 pointer-events-none" />
+          
+          <div className={pillClass} />
 
-        <div className="relative z-10 flex items-start justify-between gap-3">
-          <div className="min-w-0 space-y-0.5">
-            <span className="text-[10px] tracking-[0.14em] uppercase font-semibold text-white/80">
-              {vault.vaultType}
-            </span>
-            <h4 className="text-base font-semibold tracking-tight leading-snug truncate">{vault.name}</h4>
-          </div>
-          <button
-            onClick={() => setShowManage((v) => !v)}
-            aria-label="Manage vault"
-            aria-expanded={showManage}
-            className={`w-7 h-7 rounded-full flex items-center justify-center shrink-0 transition-colors ${
-              showManage ? 'bg-white/25 text-white' : 'bg-white/10 text-white/80 hover:bg-white/20 hover:text-white'
-            }`}
-          >
-            <DotsIcon className="w-4 h-4" />
-          </button>
-        </div>
+          <WaveAnimation />
 
-        <div className="relative z-10 pt-2.5 space-y-1">
-          <div className="flex items-baseline gap-1.5">
-            <span className="text-lg font-semibold tracking-tight leading-none">
-              {vault.balance.toFixed(2)}
-            </span>
-            <span className="text-[11px] font-medium text-white/75">
-              / {vault.targetAmount.toFixed(2)} USDC
-            </span>
-          </div>
-          <div className="flex justify-between text-[9px] font-medium text-white/70">
-            <span>{progress.toFixed(0)}%</span>
-          </div>
-          <div className="h-1 rounded-full bg-white/25 overflow-hidden">
-            <div
-              className="h-full rounded-full bg-white transition-all"
-              style={{ width: `${progress}%` }}
-            />
-          </div>
-        </div>
-      </div>
-
-      <div className="p-4 space-y-2.5">
-      {vault.description && (
-        <p className="text-xs text-slate-400 font-normal">{vault.description}</p>
-      )}
-
-      {/* Contribute / Withdraw entry buttons */}
-      {action === null && (
-        <div className="grid grid-cols-2 gap-2 pt-1">
-          <button
-            onClick={() => openAction('deposit')}
-            className="py-2.5 rounded-xl bg-[#FF9F1C] text-white text-xs font-semibold hover:bg-[#FF8C00] active:scale-95 transition-all"
-          >
-            Contribute
-          </button>
-          <button
-            onClick={() => openAction('withdraw')}
-            disabled={withdrawDisabled}
-            title={withdrawDisabled ? 'Withdrawals are only available for personal vaults once active' : undefined}
-            className="py-2.5 rounded-xl bg-slate-50 text-slate-600 text-xs font-semibold hover:bg-slate-100 active:scale-95 transition-all disabled:opacity-40 disabled:hover:bg-slate-50"
-          >
-            Withdraw
-          </button>
-        </div>
-      )}
-
-      {/* Amount entry + confirm */}
-      {action !== null && !needsPin && (
-        <div className="pt-1 space-y-2.5 border-t border-slate-100 mt-1">
-          <label className="block text-[10px] uppercase tracking-wider text-slate-400 font-light pt-2">
-            {action === 'deposit' ? 'Contribute amount' : 'Withdraw amount'}
-          </label>
-          <div className="relative flex items-center">
-            <input
-              type="number"
-              value={amount}
-              onChange={(e) => setAmount(e.target.value)}
-              placeholder="0.00"
-              disabled={busy}
-              className="w-full rounded-xl bg-slate-50 border border-slate-100 pl-3.5 pr-12 py-2.5 text-xs text-slate-800 outline-none focus:border-[#A0F0F0] disabled:opacity-50 transition-colors"
-            />
-            <span className="absolute right-3.5 text-[10px] text-slate-400">USDC</span>
-          </div>
-
-          {error && <p className="text-[10px] text-rose-500">{error}</p>}
-
-          <div className="flex gap-2">
-            <button
-              onClick={runAction}
-              disabled={busy || !amount || Number(amount) <= 0}
-              className="flex-1 py-2.5 rounded-xl bg-[#FF9F1C] text-white text-xs font-semibold disabled:opacity-40 flex items-center justify-center gap-2"
-            >
-              {busy && (
-                <svg className="animate-spin h-3 w-3 text-white" fill="none" viewBox="0 0 24 24">
-                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-                </svg>
-              )}
-              {busy ? 'Processing…' : 'Confirm'}
-            </button>
-            <button
-              onClick={closeAction}
-              disabled={busy}
-              className="rounded-xl bg-slate-50 border border-slate-100 px-4 py-2.5 text-xs font-medium text-slate-400"
-            >
-              Cancel
-            </button>
-          </div>
-        </div>
-      )}
-
-      {/* PIN re-auth prompt */}
-      {needsPin && (
-        <div className="rounded-xl border border-slate-100 bg-slate-50/50 p-4 space-y-3 mt-1">
-          <p className="text-[10px] uppercase tracking-wider text-slate-400 font-light">
-            Enter PIN to continue
-          </p>
-          <input
-            type="password"
-            inputMode="numeric"
-            value={pinInput}
-            onChange={(e) => setPinInput(e.target.value)}
-            placeholder="••••••"
-            disabled={unlocking}
-            className="w-full rounded-xl bg-white border border-slate-100 px-3.5 py-2.5 text-xs text-slate-800 outline-none focus:border-[#A0F0F0] disabled:opacity-50"
-          />
-          {pinError && <p className="text-[10px] text-rose-500">{pinError}</p>}
-          <div className="flex gap-2">
-            <button
-              onClick={handleUnlockAndRetry}
-              disabled={unlocking || !pinInput}
-              className="flex-1 rounded-xl bg-linear-to-r from-[#FF9F1C] to-[#F37A00] text-white py-2.5 text-[10px] uppercase tracking-widest font-normal disabled:opacity-40"
-            >
-              {unlocking ? 'Unlocking…' : 'Unlock & continue'}
-            </button>
-            <button
-              onClick={closeAction}
-              disabled={unlocking}
-              className="rounded-xl bg-slate-50 border border-slate-100 px-4 py-2.5 text-[10px] uppercase tracking-wide text-slate-400"
-            >
-              Cancel
-            </button>
-          </div>
-        </div>
-      )}
-
-      {/* Collaborative-vault owner controls: invite + on-chain confirmation */}
-      {isOwned && vault.vaultType === 'Collaborative' && (
-        <div className="pt-1 space-y-2 border-t border-slate-100 mt-1">
-          {!showInvite ? (
-            <button
-              onClick={() => setShowInvite(true)}
-              className="w-full py-2 rounded-xl bg-slate-50 border border-slate-100 text-[10px] font-semibold uppercase tracking-wider text-slate-500 hover:bg-slate-100 transition-colors"
-            >
-              Invite Member
-            </button>
-          ) : (
-            <InviteMemberModal
-              vaultId={vault.id}
-              onClose={() => setShowInvite(false)}
-              onSent={() => setShowInvite(false)}
-            />
-          )}
-          <PendingConfirmations
-            vaultId={vault.id}
-            onChainVaultId={vault.onChainVaultId}
-            ownerPubkey={vault.ownerPubkey}
-            onConfirmed={onChanged}
-          />
-          {vault.status === 'GoalReached' && (
-            <div className="pt-1">
-              {distributeError && <p className="text-[10px] text-rose-500 pb-1.5">{distributeError}</p>}
-              <button
-                onClick={runDistribute}
-                disabled={distributing}
-                className="w-full py-2.5 rounded-xl bg-emerald-500 text-white text-[11px] font-semibold uppercase tracking-wider disabled:opacity-50"
-              >
-                {distributing ? 'Distributing…' : 'Distribute to Members'}
-              </button>
+          <div className="relative z-10 flex items-start justify-between gap-3">
+            <div className="min-w-0 space-y-0.5 pointer-events-none">
+              <span className="text-[10px] tracking-[0.14em] uppercase font-semibold text-white/80">
+                {vault.vaultType}
+              </span>
+              <h4 className="text-base font-semibold tracking-tight leading-snug truncate">{vault.name}</h4>
             </div>
-          )}
-        </div>
-      )}
+          </div>
 
-      {/* ---------- MANAGE SECTION ---------- */}
-      {showManage && (
-        <div className="pt-1 border-t border-slate-100 mt-1">
-          <div className="mt-3">
-            <VaultManagePanel
-              vault={vault}
-              isOwned={isOwned}
-              isMemberOnly={isMemberOnly}
-              publicKey={publicKey}
-              onChanged={onChanged}
-            />
+          <div className="relative z-10 pt-2.5 space-y-1 pointer-events-none">
+            <div className="flex items-baseline gap-1.5">
+              <span className="text-lg font-semibold tracking-tight leading-none">
+                {vault.balance.toFixed(2)}
+              </span>
+              <span className="text-[11px] font-medium text-white/75">
+                / {vault.targetAmount.toFixed(2)} USDC
+              </span>
+            </div>
+            <div className="flex justify-between text-[9px] font-medium text-white/70">
+              <span>{progress.toFixed(0)}%</span>
+            </div>
+            <div className="h-1 rounded-full bg-white/25 overflow-hidden">
+              <div className="h-full rounded-full bg-white transition-all" style={{ width: `${progress}%` }} />
+            </div>
           </div>
         </div>
-      )}
+
+        {/* INNER WHITE DRAWER */}
+        <div className={drawerContainerClass}>
+          <div className="overflow-hidden rounded-b-2xl">
+            <div className={drawerContentClass}>
+              
+              {action === null && !showManage && !showInvite && !needsPin && (
+                <div className="flex items-center justify-center gap-5 py-1">
+                  <button
+                    onClick={() => openAction('deposit')}
+                    title="Contribute"
+                    className={`w-12 h-12 flex items-center justify-center rounded-full shadow-md active:scale-90 transition-transform ${
+                      isCollab ? 'bg-cyan-400 text-white hover:bg-cyan-500' : 'bg-[#FF9F1C] text-white hover:bg-[#FF8C00]'
+                    }`}
+                  >
+                    <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+                    </svg>
+                  </button>
+                  
+                  <button
+                    onClick={() => openAction('withdraw')}
+                    disabled={withdrawDisabled}
+                    title={withdrawDisabled ? 'Withdrawals only for active personal vaults' : 'Withdraw'}
+                    className="w-12 h-12 flex items-center justify-center rounded-full bg-slate-100 text-slate-600 shadow-xs hover:bg-slate-200 active:scale-90 transition-transform disabled:opacity-40"
+                  >
+                    <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5" />
+                    </svg>
+                  </button>
+
+                  {isOwned && vault.vaultType === 'Collaborative' && (
+                    <button
+                      onClick={openInviteModal}
+                      title="Invite Member"
+                      className="w-12 h-12 flex items-center justify-center rounded-full bg-slate-100 text-slate-500 shadow-xs hover:bg-slate-200 active:scale-90 transition-transform"
+                    >
+                      <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M19 7.5v3m0 0v3m0-3h3m-3 0h-3m-2.25-4.125a3.375 3.375 0 11-6.75 0 3.375 3.375 0 016.75 0zM4 19.235v-.11a6.375 6.375 0 0112.75 0v.109A12.318 12.318 0 0110.374 21c-2.331 0-4.512-.645-6.374-1.766z" />
+                      </svg>
+                    </button>
+                  )}
+
+                  <button
+                    onClick={() => setShowManage(true)}
+                    title="Manage Vault"
+                    className="w-12 h-12 flex items-center justify-center rounded-full bg-slate-100 text-slate-600 shadow-xs hover:bg-slate-200 active:scale-90 transition-transform"
+                  >
+                    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                    </svg>
+                  </button>
+                </div>
+              )}
+              
+              {showInvite && (
+                <InviteMemberModal
+                  vaultId={vault.id}
+                  onClose={() => setShowInvite(false)}
+                  onSent={() => setShowInvite(false)}
+                />
+              )}
+              
+              {vault.description && !action && !showManage && (
+                <p className="text-xs text-slate-400 font-normal">{vault.description}</p>
+              )}
+
+              {action !== null && !needsPin && (
+                <div className="space-y-2.5">
+                  <label className="block text-[10px] uppercase tracking-wider text-slate-400 font-light">
+                    {action === 'deposit' ? 'Contribute amount' : 'Withdraw amount'}
+                  </label>
+                  <div className="relative flex items-center">
+                    <input
+                      type="number"
+                      value={amount}
+                      onChange={(e) => setAmount(e.target.value)}
+                      placeholder="0.00"
+                      disabled={busy}
+                      className="w-full rounded-xl bg-slate-50 border border-slate-100 pl-3.5 pr-12 py-2.5 text-xs text-slate-800 outline-none focus:border-[#A0F0F0] disabled:opacity-50 transition-colors"
+                    />
+                    <span className="absolute right-3.5 text-[10px] text-slate-400">USDC</span>
+                  </div>
+                  {error && <p className="text-[10px] text-rose-500">{error}</p>}
+                  <div className="flex gap-2">
+                    <button
+                      onClick={runAction}
+                      disabled={busy || !amount || Number(amount) <= 0}
+                      className="flex-1 py-2.5 rounded-xl bg-[#FF9F1C] text-white text-xs font-semibold disabled:opacity-40 flex items-center justify-center gap-2"
+                    >
+                      {busy && (
+                        <svg className="animate-spin h-3 w-3 text-white" fill="none" viewBox="0 0 24 24">
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                        </svg>
+                      )}
+                      {busy ? 'Processing…' : 'Confirm'}
+                    </button>
+                    <button
+                      onClick={closeAction}
+                      disabled={busy}
+                      className="rounded-xl bg-slate-50 border border-slate-100 px-4 py-2.5 text-xs font-medium text-slate-400"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {needsPin && (
+                <div className="rounded-xl border border-slate-100 bg-slate-50/50 p-4 space-y-3">
+                  <p className="text-[10px] uppercase tracking-wider text-slate-400 font-light">
+                    Enter PIN to continue
+                  </p>
+                  <input
+                    type="password"
+                    inputMode="numeric"
+                    value={pinInput}
+                    onChange={(e) => setPinInput(e.target.value)}
+                    placeholder="••••••"
+                    disabled={unlocking}
+                    className="w-full rounded-xl bg-white border border-slate-100 px-3.5 py-2.5 text-xs text-slate-800 outline-none focus:border-[#A0F0F0] disabled:opacity-50"
+                  />
+                  {pinError && <p className="text-[10px] text-rose-500">{pinError}</p>}
+                  <div className="flex gap-2">
+                    <button
+                      onClick={handleUnlockAndRetry}
+                      disabled={unlocking || !pinInput}
+                      className="flex-1 rounded-xl bg-linear-to-r from-[#FF9F1C] to-[#F37A00] text-white py-2.5 text-[10px] uppercase tracking-widest font-normal disabled:opacity-40"
+                    >
+                      {unlocking ? 'Unlocking…' : 'Unlock & continue'}
+                    </button>
+                    <button
+                      onClick={closeAction}
+                      disabled={unlocking}
+                      className="rounded-xl bg-slate-50 border border-slate-100 px-4 py-2.5 text-[10px] uppercase tracking-wide text-slate-400"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {isOwned && vault.vaultType === 'Collaborative' && action === null && !showManage && (
+                <div className="space-y-2 border-t border-slate-100 pt-3">
+                  <PendingConfirmations
+                    vaultId={vault.id}
+                    onChainVaultId={vault.onChainVaultId}
+                    ownerPubkey={vault.ownerPubkey}
+                    onConfirmed={onChanged}
+                  />
+                  {vault.status === 'GoalReached' && (
+                    <div>
+                      {distributeError && <p className="text-[10px] text-rose-500 pb-1.5">{distributeError}</p>}
+                      <button
+                        onClick={runDistribute}
+                        disabled={distributing}
+                        className="w-full py-2.5 rounded-xl bg-emerald-500 text-white text-[11px] font-semibold uppercase tracking-wider disabled:opacity-50"
+                      >
+                        {distributing ? 'Distributing…' : 'Distribute to Members'}
+                      </button>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {showManage && (
+                <div className="pt-1">
+                  <VaultManagePanel
+                    vault={vault}
+                    isOwned={isOwned}
+                    isMemberOnly={isMemberOnly}
+                    publicKey={publicKey}
+                    onChanged={onChanged}
+                  />
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   );
