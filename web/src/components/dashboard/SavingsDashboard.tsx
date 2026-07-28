@@ -534,7 +534,8 @@ export default function SavingsDashboard({ publicKey, wallet, onLogout, headerAc
         {/* Floating Nav */}
         <NavBar 
           activeTab={activeTab} 
-          onTabChange={(tab) => { setActiveTab(tab); setPanel(null); }} 
+          onTabChange={(tab) => { setActiveTab(tab); setPanel(null); }}
+          homeZone={homeZone}
         />
         
       </div>

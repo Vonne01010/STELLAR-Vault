@@ -4,7 +4,7 @@ import React from 'react';
 import { SendIcon, ReceiveIcon } from '@/app/icons';
 import type { Panel } from '@/lib/dashboardTypes';
 import type { HistoryEntry } from '@/lib/history';
-import { useSwipeX } from '@/lib/useSwipeX';
+import { useSwipeXAnimated } from '@/lib/useSwipeXAnimated';
 import BalanceCard from './BalanceCard';
 
 interface WalletZoneProps {
@@ -42,7 +42,7 @@ export default function WalletZone({
   onSwipeToVault,
 }: WalletZoneProps) {
   const isPanelOpen = panel === 'send' || panel === 'receive';
-  const swipeHandlers = useSwipeX(undefined, onSwipeToVault);
+  const { dragX, dragging, exiting, ...swipeHandlers } = useSwipeXAnimated(undefined, onSwipeToVault);
 
   return (
     <div className="mx-6 mt-6 space-y-5">
@@ -90,6 +90,9 @@ export default function WalletZone({
             gradientClassName="bg-linear-to-br from-cyan-400 via-cyan-500 to-blue-600"
             shadowClassName="shadow-[0_18px_30px_-14px_rgba(8,145,178,0.40)]"
             swipeProps={swipeHandlers}
+            dragX={dragX}
+            dragging={dragging}
+            exiting={exiting}
           />
 
           <div className="grid grid-cols-2 gap-4 px-2">

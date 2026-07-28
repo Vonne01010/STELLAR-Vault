@@ -5,7 +5,7 @@ import VaultCore from '@/components/dashboard/VaultCore';
 import BalanceCard from './BalanceCard';
 import { DepositIcon, WithdrawIcon, CreateIcon } from '@/app/icons';
 import type { Panel } from '@/lib/dashboardTypes';
-import { useSwipeX } from '@/lib/useSwipeX';
+import { useSwipeXAnimated } from '@/lib/useSwipeXAnimated';
 
 interface VaultZoneProps {
   loading: boolean;
@@ -15,8 +15,8 @@ interface VaultZoneProps {
   walletUsdcBalance: number;
   panel: Panel;
   setPanel: (panel: Panel) => void;
-  goalProgress: number;
-  vaultLevel: number;
+  goalProgress?: number;
+  vaultLevel?: number;
   vaultName?: string;
   targetLabel?: string;
   members?: { id: string; initial: string; color?: string }[];
@@ -53,8 +53,8 @@ export default function VaultZone({
   walletUsdcBalance,
   panel,
   setPanel,
-  goalProgress,
-  vaultLevel,
+  goalProgress = 0,
+  vaultLevel = 0,
   vaultName,
   targetLabel,
   members,
@@ -62,7 +62,7 @@ export default function VaultZone({
   onSwipeToWallet,
 }: VaultZoneProps) {
   const isPanelOpen = panel === 'deposit' || panel === 'withdraw' || panel === 'create';
-  const swipeHandlers = useSwipeX(onSwipeToWallet, undefined);
+  const { dragX, dragging, exiting, ...swipeHandlers } = useSwipeXAnimated(onSwipeToWallet, undefined);
 
   return (
     <div className="mx-6 mt-6 space-y-5">
@@ -106,6 +106,9 @@ export default function VaultZone({
             gradientClassName="bg-linear-to-br from-[#FFB238] via-[#FF9F1C] to-[#F37A00]"
             shadowClassName="shadow-[0_18px_30px_-14px_rgba(230,80,0,0.40)]"
             swipeProps={swipeHandlers}
+            dragX={dragX}
+            dragging={dragging}
+            exiting={exiting}
           />
 
           <div className="grid grid-cols-3 gap-4 px-2">

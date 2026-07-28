@@ -26,9 +26,11 @@ const SESSION_KEY_MISSING_MESSAGE = 'Your session key is unavailable. Please unl
 export default function CreateVault({
   publicKey,
   onCreated,
+  onClose,
 }: {
   publicKey: string;
   onCreated: (vaultId: string) => void;
+  onClose?: () => void;
 }) {
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
@@ -88,6 +90,7 @@ export default function CreateVault({
       }
 
       setStatus('success');
+      onClose?.();
       recordHistoryEntry({
         account: publicKey,
         kind: 'vault_create',

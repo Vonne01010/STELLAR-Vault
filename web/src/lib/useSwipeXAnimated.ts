@@ -34,9 +34,22 @@ export function useSwipeXAnimated(
   const startX = useRef<number | null>(null);
   const startY = useRef<number | null>(null);
   const active = useRef(false);
+  const ignoreSwipe = useRef(false);
 
   const onPointerDown = (e: React.PointerEvent) => {
     if (exiting) return;
+
+    const target = e.target;
+    const isInteractiveControl = target instanceof Element && target.closest('button, a, input, textarea, select, summary, [role="button"], [data-swipe-ignore]') !== null;
+
+    if (isInteractiveControl) {
+      ignoreSwipe.current = true;
+      return;
+    }
+
+    ignoreSwipe.current = false;
+    e.preventDefault();
+    e.stopPropagation();
     startX.current = e.clientX;
     startY.current = e.clientY;
     active.current = true;
@@ -45,6 +58,8 @@ export function useSwipeXAnimated(
   };
 
   const onPointerMove = (e: React.PointerEvent) => {
+    if (ignoreSwipe.current) return;
+    if (active.current) e.preventDefault();
     if (!active.current || startX.current === null || startY.current === null) return;
     const deltaX = e.clientX - startX.current;
     const deltaY = e.clientY - startY.current;
@@ -54,6 +69,13 @@ export function useSwipeXAnimated(
   };
 
   const finish = (clientX: number, clientY: number) => {
+    if (ignoreSwipe.current) {
+      ignoreSwipe.current = false;
+      setDragging(false);
+      setDragX(0);
+      return;
+    }
+
     if (!active.current || startX.current === null || startY.current === null) {
       setDragging(false);
       return;
@@ -87,6 +109,7 @@ export function useSwipeXAnimated(
   const onPointerUp = (e: React.PointerEvent) => finish(e.clientX, e.clientY);
 
   const onPointerCancel = () => {
+    ignoreSwipe.current = false;
     active.current = false;
     startX.current = null;
     startY.current = null;

@@ -16,6 +16,12 @@ interface BalanceCardProps {
   shadowClassName?: string;
   /** Spread onto the card root — used to attach swipe/drag handlers for zone switching. */
   swipeProps?: Record<string, unknown>;
+  /** Live horizontal drag offset while swiping. */
+  dragX?: number;
+  /** True while the pointer is actively dragging. */
+  dragging?: boolean;
+  /** True while the card is in its exit animation state. */
+  exiting?: boolean;
 }
 
 /** Two offset, differently-timed wave layers create a subtle water motion
@@ -73,11 +79,28 @@ export default function BalanceCard({
   gradientClassName,
   shadowClassName = '',
   swipeProps,
+  dragX = 0,
+  dragging = false,
+  exiting = false,
 }: BalanceCardProps) {
+  const peelRotation = Math.max(-10, Math.min(10, dragX / 22));
+  const peelOffset = dragX;
+  const peelScale = 1 - Math.min(0.12, Math.abs(dragX) / 900);
+  const peelOpacity = exiting ? 0.2 : 1 - Math.min(0.25, Math.abs(dragX) / 700);
+  const peelShadow = dragging ? '0 22px 30px -16px rgba(15, 23, 42, 0.35)' : '0 18px 30px -14px rgba(15, 23, 42, 0.25)';
+  const swipeTransform = `translateX(${peelOffset}px) rotate(${peelRotation}deg) scale(${peelScale})`;
+
   return (
     <div
       {...swipeProps}
-      className={`p-6 rounded-3xl text-white relative overflow-hidden animate-fadeIn touch-pan-y ${gradientClassName} ${shadowClassName}`}
+      className={`p-6 rounded-3xl text-white relative overflow-hidden animate-fadeIn touch-none ${gradientClassName} ${shadowClassName}`}
+      style={{
+        transform: swipeTransform,
+        transition: dragging ? 'none' : 'transform 220ms cubic-bezier(0.22, 1, 0.36, 1), box-shadow 220ms ease, opacity 220ms ease',
+        opacity: peelOpacity,
+        boxShadow: peelShadow,
+        willChange: 'transform, opacity, box-shadow',
+      }}
     >
       <WaveAnimation />
 
