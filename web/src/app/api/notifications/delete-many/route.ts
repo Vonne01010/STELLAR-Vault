@@ -10,7 +10,7 @@ export async function POST(request: Request) {
     }
 
     const body = await request.json().catch(() => null)
-    const ids = Array.isArray(body?.ids) ? body.ids.filter((id): id is string => typeof id === "string") : []
+    const ids = Array.isArray(body?.ids) ? body.ids.filter((id: unknown): id is string => typeof id === "string") : []
 
     if (!ids.length) {
       return Response.json({ success: true })
