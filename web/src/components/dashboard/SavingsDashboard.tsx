@@ -407,6 +407,15 @@ export default function SavingsDashboard({ publicKey, wallet, onLogout, headerAc
 
   return (
     <BudgetProvider history={history}>
+      <style>{`
+        @keyframes slideInRight {
+          from { transform: translateX(100%); opacity: 0.5; }
+          to { transform: translateX(0); opacity: 1; }
+        }
+        .animate-slideInRight {
+          animation: slideInRight 0.35s cubic-bezier(0.25, 1, 0.5, 1) forwards;
+        }
+      `}</style>
       <div className="max-w-md mx-auto min-h-210 bg-[#fffdfb] rounded-[2.5rem] overflow-hidden shadow-xl relative flex flex-col justify-between font-sans tracking-tight border border-slate-200/40 text-[#1A1A1A]">
         
         <div {...pageSwipe} className="flex-1 pb-36 overflow-y-auto touch-pan-y">
@@ -482,7 +491,7 @@ export default function SavingsDashboard({ publicKey, wallet, onLogout, headerAc
 
           {/* Slide Inline Configuration Panels */}
           {activeTab === 'home' && panel && (
-            <div className="mx-4 mt-2 space-y-3">
+            <div className="mx-4 mt-2 space-y-3 animate-slideInRight">
               {(transferState.status !== 'idle') && (
                 <div className="p-3 bg-white rounded-xl border border-slate-100 space-y-1 text-[11px]">
                   <p className="text-slate-400 font-light">{transferState.message}</p>
@@ -546,10 +555,10 @@ export default function SavingsDashboard({ publicKey, wallet, onLogout, headerAc
           )}
 
           {/* Core Tabs Views */}
-          {activeTab === 'activity' && <div className="pt-8"><History history={history} loading={loading} onRefresh={refresh} onSelectEntry={handleHistorySelection} /></div>}
+          {activeTab === 'activity' && <div className="pt-8 animate-slideInRight"><History history={history} loading={loading} onRefresh={refresh} onSelectEntry={handleHistorySelection} /></div>}
           
           {activeTab === 'profile' && (
-            <div className="pt-8">
+            <div className="pt-8 animate-slideInRight">
               <Profile 
                 publicKey={publicKey} phpRate={phpRate} copied={copied} purchasingPowerSaved={purchasingPowerSaved}
                 onCopyAddress={handleCopyAddress} wallet={wallet} loading={loading} onRefresh={refresh}
@@ -561,7 +570,7 @@ export default function SavingsDashboard({ publicKey, wallet, onLogout, headerAc
           )}
           
           {activeTab === 'vaults' && (
-            <div className="pt-8">
+            <div className="pt-8 animate-slideInRight">
               <Vaults
                 publicKey={publicKey}
                 loading={loading}
