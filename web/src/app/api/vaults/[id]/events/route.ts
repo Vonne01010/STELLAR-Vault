@@ -86,6 +86,8 @@ type Vault = {
   balance: number
   targetAmount: number
   status: string
+  rotationOrder: unknown
+  contributionAmount: number | null
 }
 
 async function handleEvent(
@@ -118,6 +120,14 @@ async function handleDeposit(vault: Vault, body: Record<string, unknown>, report
   const amount = Number(body.amount)
   if (!amount || amount <= 0) {
     return { error: "amount must be a positive number", status: 400 }
+  }
+  if (vault.rotationOrder && vault.contributionAmount) {
+    if (Math.abs(amount - vault.contributionAmount) > 0.0001) {
+      return {
+        error: `This is a Paluwagan vault — each contribution must be exactly ${vault.contributionAmount}`,
+        status: 400,
+      }
+    }
   }
 
   const newBalance = vault.balance + amount
