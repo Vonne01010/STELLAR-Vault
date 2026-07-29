@@ -64,7 +64,10 @@ export async function POST(
       }),
       prisma.vault.update({
         where: { id: vaultId },
-        data: { balance: { decrement: withdrawalRequest.amount } },
+        data: {
+          balance: { decrement: withdrawalRequest.amount },
+          ...(vault.rotationOrder ? { currentRound: { increment: 1 } } : {}),
+        },
       }),
     ])
 

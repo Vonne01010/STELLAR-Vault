@@ -88,6 +88,29 @@ export async function POST(
       return Response.json({ error: "Amount exceeds vault balance" }, { status: 400 })
     }
 
+    // Paluwagan enforcement: if a rotation order is set, the recipient must
+    // be whoever is next in line, and the amount must be the full pot
+    // (fixed contribution × member count) — no free-form recipient/amount.
+    if (vault.rotationOrder) {
+      const rotation = vault.rotationOrder as string[]
+      const expectedRecipient = rotation[vault.currentRound % rotation.length]
+      const memberCount = await prisma.vaultMember.count({ where: { vaultId } })
+      const expectedAmount = (vault.contributionAmount ?? 0) * memberCount
+
+      if (recipientPubkey !== expectedRecipient) {
+        return Response.json(
+          { error: `This round's payout must go to the next member in rotation (${expectedRecipient})` },
+          { status: 400 }
+        )
+      }
+      if (Math.abs(amount - expectedAmount) > 0.0001) {
+        return Response.json(
+          { error: `Paluwagan payout must equal the full pot (${expectedAmount})` },
+          { status: 400 }
+        )
+      }
+    }
+
     // The requester's own approval is recorded automatically on-chain, so we
     // mirror that here.
     const withdrawalRequest = await prisma.withdrawalRequest.create({

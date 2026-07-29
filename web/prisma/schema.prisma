@@ -63,6 +63,9 @@ model Vault {
   targetAmount Float
   ownerPubkey  String
   createdAt    DateTime @default(now())
+  rotationOrder      Json?   
+  contributionAmount Float?   
+  currentRound       Int      @default(0)
 
   contractAddress String
   onChainVaultId   BigInt
