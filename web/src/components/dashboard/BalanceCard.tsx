@@ -51,18 +51,20 @@ function WaveAnimation() {
       </svg>
       <style jsx>{`
         @keyframes wave-slide-back {
-          from { transform: translateX(0); }
-          to { transform: translateX(-50%); }
+          from { transform: translate3d(0, 0, 0); }
+          to { transform: translate3d(-50%, 0, 0); }
         }
         @keyframes wave-slide-front {
-          from { transform: translateX(0); }
-          to { transform: translateX(-50%); }
+          from { transform: translate3d(0, 0, 0); }
+          to { transform: translate3d(-50%, 0, 0); }
         }
         .wave-layer-back {
           animation: wave-slide-back 9s linear infinite;
+          will-change: transform;
         }
         .wave-layer-front {
           animation: wave-slide-front 5.5s linear infinite reverse;
+          will-change: transform;
         }
       `}</style>
     </div>
@@ -83,12 +85,8 @@ export default function BalanceCard({
   dragging = false,
   exiting = false,
 }: BalanceCardProps) {
-  const peelRotation = Math.max(-10, Math.min(10, dragX / 22));
-  const peelOffset = dragX;
-  const peelScale = 1 - Math.min(0.12, Math.abs(dragX) / 900);
-  const peelOpacity = exiting ? 0.2 : 1 - Math.min(0.25, Math.abs(dragX) / 700);
-  const peelShadow = dragging ? '0 22px 30px -16px rgba(15, 23, 42, 0.35)' : '0 18px 30px -14px rgba(15, 23, 42, 0.25)';
-  const swipeTransform = `translateX(${peelOffset}px) rotate(${peelRotation}deg) scale(${peelScale})`;
+  const swipeTransform = `translate3d(${dragX}px, 0, 0)`;
+  const opacity = exiting ? 0 : 1 - Math.min(0.2, Math.abs(dragX) / 800);
 
   return (
     <div
@@ -96,10 +94,11 @@ export default function BalanceCard({
       className={`p-6 rounded-3xl text-white relative overflow-hidden animate-fadeIn touch-none ${gradientClassName} ${shadowClassName}`}
       style={{
         transform: swipeTransform,
-        transition: dragging ? 'none' : 'transform 220ms cubic-bezier(0.22, 1, 0.36, 1), box-shadow 220ms ease, opacity 220ms ease',
-        opacity: peelOpacity,
-        boxShadow: peelShadow,
-        willChange: 'transform, opacity, box-shadow',
+        transition: dragging 
+          ? 'none' 
+          : 'transform 300ms cubic-bezier(0.2, 0.8, 0.2, 1), opacity 300ms ease',
+        opacity,
+        willChange: 'transform, opacity',
       }}
     >
       <WaveAnimation />

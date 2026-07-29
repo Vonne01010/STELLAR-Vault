@@ -8,14 +8,14 @@ import type { VaultData, VaultsProps, VaultSubTab } from './types';
 
 function VaultCardSkeleton() {
   return (
-    <div className="p-4 rounded-2xl bg-slate-100 animate-pulse space-y-3">
-      <div className="space-y-2">
-        <div className="h-2.5 w-16 rounded-full bg-slate-200" />
+    <div className="p-4 rounded-2xl bg-slate-100 animate-pulse space-y-7">
+      <div className="space-y-3">
+        <div className="h-3 w-16 rounded-full bg-slate-200" />
         <div className="h-4 w-32 rounded-full bg-slate-200" />
       </div>
-      <div className="space-y-1.5 pt-1">
+      <div className="space-y-2 pt-1">
         <div className="h-4 w-28 rounded-full bg-slate-200" />
-        <div className="h-1 w-full rounded-full bg-slate-200" />
+        <div className="h-2 w-full rounded-full bg-slate-200" />
       </div>
     </div>
   );
@@ -183,7 +183,7 @@ export default function Vaults({
           </div>
 
           {/* List Container with scrollbar hidden & horizontal overflow disabled */}
-          <div className="space-y-3 max-h-150 overflow-y-auto overflow-x-hidden scrollbar-none [&::-webkit-scrollbar]:hidden">
+          <div className="space-y-5 max-h-150 overflow-y-auto overflow-x-hidden scrollbar-none [&::-webkit-scrollbar]:hidden">
             {isLoading && !hasLoadedOnce ? (
               Array.from({ length: 3 }).map((_, i) => <VaultCardSkeleton key={i} />)
             ) : filteredList.length === 0 ? (

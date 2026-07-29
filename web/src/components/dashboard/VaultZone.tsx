@@ -67,7 +67,7 @@ export default function VaultZone({
   const { dragX, dragging, exiting, ...swipeHandlers } = useSwipeXAnimated(onSwipeToWallet, undefined);
 
   return (
-    <div className="mx-6 mt-6 space-y-5">
+    <div className="mx-6 mt-6 space-y-5 animate-slideInRight">
       {isPanelOpen ? (
         // Compact header while a panel is open — mirrors WalletZone's treatment
         // so opening a form doesn't require scrolling past the full hero + grid.
