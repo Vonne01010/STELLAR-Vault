@@ -6,6 +6,21 @@ import { RefreshIcon } from '@/app/icons';
 import VaultCard from './VaultCard';
 import type { VaultData, VaultsProps, VaultSubTab } from './types';
 
+function VaultCardSkeleton() {
+  return (
+    <div className="p-4 rounded-2xl bg-slate-100 animate-pulse space-y-7">
+      <div className="space-y-3">
+        <div className="h-3 w-16 rounded-full bg-slate-200" />
+        <div className="h-4 w-32 rounded-full bg-slate-200" />
+      </div>
+      <div className="space-y-2 pt-1">
+        <div className="h-4 w-28 rounded-full bg-slate-200" />
+        <div className="h-2 w-full rounded-full bg-slate-200" />
+      </div>
+    </div>
+  );
+}
+
 export default function Vaults({
   publicKey,
   loading: parentLoading,
@@ -168,11 +183,9 @@ export default function Vaults({
           </div>
 
           {/* List Container with scrollbar hidden & horizontal overflow disabled */}
-          <div className="space-y-3 max-h-150 overflow-y-auto overflow-x-hidden scrollbar-none [&::-webkit-scrollbar]:hidden">
+          <div className="space-y-5 max-h-150 overflow-y-auto overflow-x-hidden scrollbar-none [&::-webkit-scrollbar]:hidden">
             {isLoading && !hasLoadedOnce ? (
-              <p className="p-6 rounded-3xl bg-white border border-slate-200/60 text-xs font-normal text-slate-400 text-center shadow-md shadow-slate-900/5">
-                Loading…
-              </p>
+              Array.from({ length: 3 }).map((_, i) => <VaultCardSkeleton key={i} />)
             ) : filteredList.length === 0 ? (
               <p className="p-6 rounded-3xl bg-white border border-slate-200/60 text-xs font-normal text-slate-400 text-center shadow-md shadow-slate-900/5">
                 {search.trim()
@@ -182,7 +195,8 @@ export default function Vaults({
                     : "You haven't joined any vaults yet."}
               </p>
             ) : (
-              filteredList.map((v) => (
+              <div className={`space-y-3 transition-opacity duration-300 ${isLoading ? 'opacity-50 pointer-events-none' : ''}`}>
+              {filteredList.map((v) => (
                 <div
                   key={v.id}
                   ref={(el) => {
@@ -198,7 +212,8 @@ export default function Vaults({
                     publicKey={publicKey}
                   />
                 </div>
-              ))
+              ))}
+              </div>
             )}
           </div>
         </>
