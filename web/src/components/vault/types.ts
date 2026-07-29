@@ -41,6 +41,18 @@ export interface VaultProposalRow {
   approvals: { pubkey: string }[];
 }
 
+export interface VaultWithdrawalRequestRow {
+  id: string;
+  vaultId: string;
+  onChainRequestId: string;
+  requesterPubkey: string;
+  recipientPubkey: string;
+  amount: number;
+  status: 'pending' | 'executed';
+  createdAt: string;
+  approvals: { pubkey: string }[];
+}
+
 export type VaultSubTab = 'owned' | 'joined';
 export type MoneyAction = 'deposit' | 'withdraw';
 
