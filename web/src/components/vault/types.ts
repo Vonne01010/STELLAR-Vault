@@ -11,6 +11,8 @@ export interface VaultData {
   ownerPubkey: string;
   createdAt: string;
   withdrawable?: boolean;
+  rotationOrder?: string[] | null;
+  contributionAmount?: number | null;
 }
 
 export interface VaultsProps {

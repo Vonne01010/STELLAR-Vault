@@ -113,6 +113,17 @@ export default function VaultCard({ vault, onChanged, isOwned, highlighted, publ
 
   const runAction = async () => {
     if (!action) return;
+
+    if (
+      action === 'deposit' &&
+      vault.rotationOrder &&
+      vault.contributionAmount &&
+      Math.abs(Number(amount) - vault.contributionAmount) > 0.0001
+    ) {
+      setError(`This is a Paluwagan vault — you must contribute exactly ${vault.contributionAmount} per round.`);
+      return;
+    }
+
     setBusy(true);
     setError('');
     try {
