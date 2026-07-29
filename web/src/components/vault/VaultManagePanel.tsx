@@ -1,14 +1,17 @@
 'use client';
 import { useState, useEffect, useCallback } from 'react';
 import { authFetch, walletService, signWithCurrentAccount } from '@/lib/wallet';
-import { submitSignedXDR, pollTransaction } from '@/lib/payment';
+import { submitSignedXDR, pollTransaction, pollTransactionForResult } from '@/lib/payment';
 import {
   buildUpdateGoalXDR,
   buildUpdateLockXDR,
   buildRemoveMemberXDR,
   buildCloseVaultXDR,
+  buildRequestWithdrawalXDR,
+  buildApproveWithdrawalXDR,
+  buildExecuteWithdrawalXDR,
 } from '@/lib/contract';
-import { SESSION_KEY_MISSING_MESSAGE, type VaultData, type VaultMemberRow, type VaultProposalRow } from './types';
+import { SESSION_KEY_MISSING_MESSAGE, type VaultData, type VaultMemberRow, type VaultProposalRow, type VaultWithdrawalRequestRow } from './types';
 
 interface VaultManagePanelProps {
   vault: VaultData;
@@ -17,6 +20,12 @@ interface VaultManagePanelProps {
   publicKey: string | null;
   onChanged: () => void;
 }
+
+type PendingWithdrawalAction =
+  | { kind: 'request'; recipient: string; amount: number }
+  | { kind: 'approve'; request: VaultWithdrawalRequestRow }
+  | { kind: 'execute'; request: VaultWithdrawalRequestRow }
+  | null;
 
 export default function VaultManagePanel({ vault, isOwned, isMemberOnly, publicKey, onChanged }: VaultManagePanelProps) {
   const [manageLoading, setManageLoading] = useState(false);
@@ -43,20 +52,41 @@ export default function VaultManagePanel({ vault, isOwned, isMemberOnly, publicK
   const [proposalUnlocking, setProposalUnlocking] = useState(false);
   const [pendingProposalExecution, setPendingProposalExecution] = useState<VaultProposalRow | null>(null);
 
+  const [withdrawalRequests, setWithdrawalRequests] = useState<VaultWithdrawalRequestRow[]>([]);
+
+  const [showRequestForm, setShowRequestForm] = useState(false);
+  const [requestRecipient, setRequestRecipient] = useState('');
+  const [requestAmount, setRequestAmount] = useState('');
+  const [requesting, setRequesting] = useState(false);
+  const [requestError, setRequestError] = useState('');
+
+  const [withdrawalBusy, setWithdrawalBusy] = useState<string | null>(null);
+  const [withdrawalActionError, setWithdrawalActionError] = useState('');
+  const [withdrawalNeedsPin, setWithdrawalNeedsPin] = useState(false);
+  const [withdrawalPinInput, setWithdrawalPinInput] = useState('');
+  const [withdrawalPinError, setWithdrawalPinError] = useState('');
+  const [withdrawalUnlocking, setWithdrawalUnlocking] = useState(false);
+
+  const [pendingWithdrawalAction, setPendingWithdrawalAction] = useState<PendingWithdrawalAction>(null);
+
   const loadManageData = useCallback(async () => {
     setManageLoading(true);
     setManageError('');
     try {
-      const [membersRes, proposalsRes] = await Promise.all([
+      const [membersRes, proposalsRes, withdrawalsRes] = await Promise.all([
         authFetch(`/api/vaults/${vault.id}/members`),
         authFetch(`/api/vaults/${vault.id}/proposals`),
+        authFetch(`/api/vaults/${vault.id}/withdrawal-requests`),
       ]);
       const membersData = await membersRes.json();
       const proposalsData = await proposalsRes.json();
+      const withdrawalsData = await withdrawalsRes.json();
       if (!membersRes.ok) throw new Error(membersData?.error ?? 'Failed to load members');
       if (!proposalsRes.ok) throw new Error(proposalsData?.error ?? 'Failed to load proposals');
+      if (!withdrawalsRes.ok) throw new Error(withdrawalsData?.error ?? 'Failed to load withdrawal requests');
       setMembers(membersData);
       setProposals(proposalsData);
+      setWithdrawalRequests(withdrawalsData);
     } catch (e: unknown) {
       setManageError(e instanceof Error ? e.message : 'Failed to load vault management data');
     } finally {
@@ -233,6 +263,127 @@ export default function VaultManagePanel({ vault, isOwned, isMemberOnly, publicK
       setProposalUnlocking(false);
     }
   };
+
+  const handleRequestWithdrawal = async (recipient: string, amount: number) => {
+    setRequesting(true);
+    setRequestError('');
+    try {
+      const xdr = await buildRequestWithdrawalXDR(vault.ownerPubkey, vault.onChainVaultId, recipient, amount);
+      const signedXdr = await signWithCurrentAccount(xdr);
+      const hash = await submitSignedXDR(signedXdr);
+      const returnValue = await pollTransactionForResult(hash);
+      const onChainRequestId = String(returnValue);
+
+      const res = await authFetch(`/api/vaults/${vault.id}/withdrawal-requests`, {
+        method: 'POST',
+        body: JSON.stringify({ onChainRequestId, recipientPubkey: recipient, amount }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data?.error ?? 'Failed to create withdrawal request');
+
+      setShowRequestForm(false);
+      setRequestRecipient('');
+      setRequestAmount('');
+      await loadManageData();
+      onChanged();
+    } catch (e: unknown) {
+      const message = e instanceof Error ? e.message : 'Failed to request withdrawal';
+      if (message === SESSION_KEY_MISSING_MESSAGE) {
+        setPendingWithdrawalAction({ kind: 'request', recipient, amount });
+        setWithdrawalNeedsPin(true);
+        setRequesting(false);
+        return;
+      }
+      setRequestError(message);
+    } finally {
+      setRequesting(false);
+    }
+  };
+
+  const handleApproveWithdrawal = async (request: VaultWithdrawalRequestRow) => {
+    setWithdrawalBusy(request.id);
+    setWithdrawalActionError('');
+    try {
+      const xdr = await buildApproveWithdrawalXDR(vault.ownerPubkey, vault.onChainVaultId, request.onChainRequestId);
+      const signedXdr = await signWithCurrentAccount(xdr);
+      const hash = await submitSignedXDR(signedXdr);
+      await pollTransaction(hash);
+
+      const res = await authFetch(`/api/vaults/${vault.id}/withdrawal-requests/${request.id}/approve`, { method: 'POST' });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data?.error ?? 'Failed to approve withdrawal request');
+      await loadManageData();
+    } catch (e: unknown) {
+      const message = e instanceof Error ? e.message : 'Failed to approve withdrawal request';
+      if (message === SESSION_KEY_MISSING_MESSAGE) {
+        setPendingWithdrawalAction({ kind: 'approve', request });
+        setWithdrawalNeedsPin(true);
+        setWithdrawalBusy(null);
+        return;
+      }
+      setWithdrawalActionError(message);
+    } finally {
+      setWithdrawalBusy(null);
+    }
+  };
+
+  const handleExecuteWithdrawal = async (request: VaultWithdrawalRequestRow) => {
+    setWithdrawalBusy(request.id);
+    setWithdrawalActionError('');
+    try {
+      const xdr = await buildExecuteWithdrawalXDR(vault.ownerPubkey, vault.onChainVaultId, request.onChainRequestId);
+      const signedXdr = await signWithCurrentAccount(xdr);
+      const hash = await submitSignedXDR(signedXdr);
+      await pollTransaction(hash);
+
+      const res = await authFetch(`/api/vaults/${vault.id}/withdrawal-requests/${request.id}/execute`, { method: 'POST' });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data?.error ?? 'Failed to execute withdrawal request');
+
+      await loadManageData();
+      onChanged();
+    } catch (e: unknown) {
+      const message = e instanceof Error ? e.message : 'Failed to execute withdrawal request';
+      if (message === SESSION_KEY_MISSING_MESSAGE) {
+        setPendingWithdrawalAction({ kind: 'execute', request });
+        setWithdrawalNeedsPin(true);
+        setWithdrawalBusy(null);
+        return;
+      }
+      setWithdrawalActionError(message);
+    } finally {
+      setWithdrawalBusy(null);
+    }
+  };
+
+  const handleWithdrawalUnlockAndRetry = async () => {
+    setWithdrawalUnlocking(true);
+    setWithdrawalPinError('');
+    try {
+      await walletService.unlockPinAccount(withdrawalPinInput);
+      setWithdrawalNeedsPin(false);
+      setWithdrawalPinInput('');
+      const action = pendingWithdrawalAction;
+      setPendingWithdrawalAction(null);
+      if (action?.kind === 'request') {
+        await handleRequestWithdrawal(action.recipient, action.amount);
+      } else if (action?.kind === 'approve') {
+        await handleApproveWithdrawal(action.request);
+      } else if (action?.kind === 'execute') {
+        await handleExecuteWithdrawal(action.request);
+      }
+    } catch (e: unknown) {
+      setWithdrawalPinError(e instanceof Error ? e.message : 'Incorrect PIN');
+    } finally {
+      setWithdrawalUnlocking(false);
+    }
+  };
+
+  const pendingWithdrawalRequest = withdrawalRequests.find((r) => r.status === 'pending');
+  const withdrawalMajorityCount = Math.floor(members.length / 2) + 1;
+  const withdrawalReadyToExecute = pendingWithdrawalRequest
+    ? pendingWithdrawalRequest.approvals.length * 2 > members.length
+    : false;
 
   const proposeDelete = async () => {
     setProposing(true);
@@ -419,6 +570,129 @@ export default function VaultManagePanel({ vault, isOwned, isMemberOnly, publicK
                   Cancel
                 </button>
               </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Withdrawal requests (collaborative vaults) */}
+      {vault.vaultType === 'Collaborative' && (
+        <div className="space-y-1.5">
+          <p className="text-[10px] uppercase tracking-wider text-slate-400 font-semibold">Withdrawal Requests</p>
+
+          {withdrawalActionError && <p className="text-[10px] text-rose-500">{withdrawalActionError}</p>}
+
+          {!pendingWithdrawalRequest && !showRequestForm && (
+            <button
+              onClick={() => setShowRequestForm(true)}
+              className="w-full py-2 rounded-lg bg-slate-50 border border-slate-100 text-[10px] uppercase tracking-wider text-slate-500 font-semibold"
+            >
+              Request Withdrawal
+            </button>
+          )}
+
+          {!pendingWithdrawalRequest && showRequestForm && (
+            <div className="rounded-xl border border-slate-100 p-3 space-y-2">
+              {requestError && <p className="text-[10px] text-rose-500">{requestError}</p>}
+              <input
+                type="text"
+                placeholder="Recipient public key"
+                value={requestRecipient}
+                onChange={(e) => setRequestRecipient(e.target.value)}
+                className="w-full rounded-lg bg-slate-50 border border-slate-100 px-3 py-2 text-xs outline-none focus:border-[#A0F0F0]"
+              />
+              <input
+                type="number"
+                placeholder="Amount"
+                value={requestAmount}
+                onChange={(e) => setRequestAmount(e.target.value)}
+                className="w-full rounded-lg bg-slate-50 border border-slate-100 px-3 py-2 text-xs outline-none focus:border-[#A0F0F0]"
+              />
+              <div className="flex gap-2">
+                <button
+                  onClick={() => handleRequestWithdrawal(requestRecipient, Number(requestAmount))}
+                  disabled={requesting || !requestRecipient || !requestAmount}
+                  className="flex-1 py-2 rounded-lg bg-[#FF9F1C] text-white text-[10px] uppercase tracking-wider font-semibold disabled:opacity-50"
+                >
+                  {requesting ? 'Submitting…' : 'Submit Request'}
+                </button>
+                <button
+                  onClick={() => { setShowRequestForm(false); setRequestRecipient(''); setRequestAmount(''); setRequestError(''); }}
+                  disabled={requesting}
+                  className="px-3 py-2 rounded-lg bg-slate-50 border border-slate-100 text-[10px] uppercase tracking-wide text-slate-400"
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          )}
+
+          {pendingWithdrawalRequest && (
+            <div className="rounded-xl border border-slate-100 bg-slate-50/50 p-3 space-y-2">
+              <p className="text-[11px] text-slate-500">
+                Withdraw {pendingWithdrawalRequest.amount} USDC to{' '}
+                <span className="font-mono text-slate-600">
+                  {pendingWithdrawalRequest.recipientPubkey.slice(0, 6)}…{pendingWithdrawalRequest.recipientPubkey.slice(-4)}
+                </span>
+              </p>
+              <p className="text-[11px] text-slate-400">
+                {pendingWithdrawalRequest.approvals.length} / {withdrawalMajorityCount} approvals
+              </p>
+
+              {withdrawalNeedsPin && (
+                <div className="rounded-lg border border-slate-100 bg-white p-3 space-y-2">
+                  <p className="text-[9px] uppercase tracking-wider text-slate-400 font-light">
+                    Enter PIN to continue
+                  </p>
+                  <input
+                    type="password"
+                    inputMode="numeric"
+                    value={withdrawalPinInput}
+                    onChange={(e) => setWithdrawalPinInput(e.target.value)}
+                    placeholder="••••"
+                    disabled={withdrawalUnlocking}
+                    className="w-full rounded-lg bg-slate-50 border border-slate-100 px-3 py-2 text-xs outline-none focus:border-[#A0F0F0] disabled:opacity-50"
+                  />
+                  {withdrawalPinError && <p className="text-[9px] text-rose-500">{withdrawalPinError}</p>}
+                  <div className="flex gap-2">
+                    <button
+                      onClick={handleWithdrawalUnlockAndRetry}
+                      disabled={withdrawalUnlocking || !withdrawalPinInput}
+                      className="flex-1 py-2 rounded-lg bg-linear-to-r from-[#FF9F1C] to-[#F37A00] text-white text-[10px] uppercase tracking-wider font-normal disabled:opacity-40"
+                    >
+                      {withdrawalUnlocking ? 'Unlocking…' : 'Unlock & continue'}
+                    </button>
+                    <button
+                      onClick={() => { setWithdrawalNeedsPin(false); setWithdrawalPinInput(''); setWithdrawalPinError(''); setPendingWithdrawalAction(null); }}
+                      disabled={withdrawalUnlocking}
+                      className="px-3 py-2 rounded-lg bg-slate-50 border border-slate-100 text-[10px] uppercase tracking-wide text-slate-400"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {!withdrawalNeedsPin && (
+                <div className="flex gap-2 pt-1">
+                  {!pendingWithdrawalRequest.approvals.some((a) => a.pubkey === publicKey) && (
+                    <button
+                      onClick={() => handleApproveWithdrawal(pendingWithdrawalRequest)}
+                      disabled={withdrawalBusy === pendingWithdrawalRequest.id}
+                      className="flex-1 py-2 rounded-lg bg-emerald-500 text-white text-[10px] uppercase tracking-wider font-semibold disabled:opacity-50"
+                    >
+                      {withdrawalBusy === pendingWithdrawalRequest.id ? 'Approving…' : 'Approve'}
+                    </button>
+                  )}
+                  <button
+                    onClick={() => handleExecuteWithdrawal(pendingWithdrawalRequest)}
+                    disabled={withdrawalBusy === pendingWithdrawalRequest.id || !withdrawalReadyToExecute}
+                    className="flex-1 py-2 rounded-lg bg-[#FF9F1C] text-white text-[10px] uppercase tracking-wider font-semibold disabled:opacity-50"
+                  >
+                    {withdrawalBusy === pendingWithdrawalRequest.id ? 'Executing…' : 'Execute'}
+                  </button>
+                </div>
+              )}
             </div>
           )}
         </div>
