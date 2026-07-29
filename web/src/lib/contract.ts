@@ -468,6 +468,111 @@ export async function buildRemoveMemberXDR(
   return rpc.assembleTransaction(tx, sim).build().toXDR();
 }
 
+/** Collaborative-vault step 1: a member proposes a payout. Returns the built
+ *  XDR; the on-chain `request_id` in the transaction result must be read by
+ *  the caller and passed to `POST /api/vaults/[id]/withdrawal-requests` to
+ *  sync the database afterward. */
+export async function buildRequestWithdrawalXDR(
+  requester: string,
+  vaultId: string | number,
+  recipient: string,
+  amount: number,
+): Promise<string> {
+  const contract = new Contract(CONTRACT_ID);
+  const account = await server.getAccount(requester);
+  const resolvedVaultId = resolveVaultId(vaultId);
+
+  const tx = new TransactionBuilder(account, {
+    fee: BASE_FEE,
+    networkPassphrase: NETWORK_PASSPHRASE,
+  })
+    .addOperation(
+      contract.call(
+        'request_withdrawal',
+        nativeToScVal(Address.fromString(requester), { type: 'address' }),
+        nativeToScVal(BigInt(resolvedVaultId), { type: 'u64' }),
+        nativeToScVal(Address.fromString(recipient), { type: 'address' }),
+        nativeToScVal(BigInt(Math.round(amount * STROOPS_PER_UNIT)), { type: 'i128' }),
+      ),
+    )
+    .setTimeout(30)
+    .build();
+
+  const sim = await server.simulateTransaction(tx);
+  if (!rpc.Api.isSimulationSuccess(sim)) {
+    throw new Error('Simulation failed — the request_withdrawal call would not succeed.');
+  }
+
+  return rpc.assembleTransaction(tx, sim).build().toXDR();
+}
+
+/** Collaborative-vault step 2: a member votes to approve a pending request. */
+export async function buildApproveWithdrawalXDR(
+  approver: string,
+  vaultId: string | number,
+  onChainRequestId: string | number,
+): Promise<string> {
+  const contract = new Contract(CONTRACT_ID);
+  const account = await server.getAccount(approver);
+  const resolvedVaultId = resolveVaultId(vaultId);
+
+  const tx = new TransactionBuilder(account, {
+    fee: BASE_FEE,
+    networkPassphrase: NETWORK_PASSPHRASE,
+  })
+    .addOperation(
+      contract.call(
+        'approve_withdrawal',
+        nativeToScVal(Address.fromString(approver), { type: 'address' }),
+        nativeToScVal(BigInt(resolvedVaultId), { type: 'u64' }),
+        nativeToScVal(BigInt(onChainRequestId), { type: 'u64' }),
+      ),
+    )
+    .setTimeout(30)
+    .build();
+
+  const sim = await server.simulateTransaction(tx);
+  if (!rpc.Api.isSimulationSuccess(sim)) {
+    throw new Error('Simulation failed — the approve_withdrawal call would not succeed.');
+  }
+
+  return rpc.assembleTransaction(tx, sim).build().toXDR();
+}
+
+/** Collaborative-vault step 3: once strictly more than 50% of current members
+ *  have approved, any member can trigger execution. */
+export async function buildExecuteWithdrawalXDR(
+  caller: string,
+  vaultId: string | number,
+  onChainRequestId: string | number,
+): Promise<string> {
+  const contract = new Contract(CONTRACT_ID);
+  const account = await server.getAccount(caller);
+  const resolvedVaultId = resolveVaultId(vaultId);
+
+  const tx = new TransactionBuilder(account, {
+    fee: BASE_FEE,
+    networkPassphrase: NETWORK_PASSPHRASE,
+  })
+    .addOperation(
+      contract.call(
+        'execute_withdrawal',
+        nativeToScVal(Address.fromString(caller), { type: 'address' }),
+        nativeToScVal(BigInt(resolvedVaultId), { type: 'u64' }),
+        nativeToScVal(BigInt(onChainRequestId), { type: 'u64' }),
+      ),
+    )
+    .setTimeout(30)
+    .build();
+
+  const sim = await server.simulateTransaction(tx);
+  if (!rpc.Api.isSimulationSuccess(sim)) {
+    throw new Error('Simulation failed — the execute_withdrawal call would not succeed.');
+  }
+
+  return rpc.assembleTransaction(tx, sim).build().toXDR();
+}
+
 export async function buildCloseVaultXDR(
   owner: string,
   vaultId: string | number,
