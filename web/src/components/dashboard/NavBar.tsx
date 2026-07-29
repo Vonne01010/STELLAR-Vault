@@ -2,6 +2,8 @@
 
 import React from 'react';
 import type { Tab } from '@/lib/dashboardTypes';
+import { useSwipeX } from '@/lib/useSwipeX';
+import { CreateIcon } from '@/app/icons'
 
 export type AppTab = Tab | 'tracker';
 
@@ -26,8 +28,7 @@ function NavGlyph({ type }: { type: Tab }) {
   if (type === 'vaults') {
     return (
       <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-        <rect x="3" y="7" width="18" height="13" rx="2"></rect>
-        <path d="M8 7V5a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+        <CreateIcon />
       </svg>
     );
   }
@@ -43,15 +44,28 @@ function NavGlyph({ type }: { type: Tab }) {
 interface NavBarProps {
   activeTab: AppTab;
   onTabChange: (tab: AppTab) => void;
+  /** Which home sub-zone is active, so the Home icon can reflect it (orange = vault, cyan = wallet). */
+  homeZone?: 'vault' | 'wallet';
 }
 
-export default function NavBar({ activeTab, onTabChange }: NavBarProps) {
-  const tabs: AppTab[] = ['home', 'vaults', 'tracker', 'activity', 'profile'];
+export default function NavBar({ activeTab, onTabChange, homeZone = 'vault' }: NavBarProps) {
+  const tabs: AppTab[] = ['home', 'vaults', 'activity', 'profile'];
+
+  const changeTab = (direction: 1 | -1) => {
+    const idx = tabs.indexOf(activeTab);
+    const next = idx + direction;
+    if (next >= 0 && next < tabs.length) onTabChange(tabs[next]);
+  };
+  const swipeHandlers = useSwipeX(() => changeTab(1), () => changeTab(-1));
 
   return (
-    <div className="absolute bottom-0 inset-x-0 bg-white/95 backdrop-blur-md border-t border-slate-100 px-4 pt-3 pb-7 flex justify-between items-center z-40">
+    <div
+      {...swipeHandlers}
+      className="absolute bottom-0 inset-x-0 bg-white/95 backdrop-blur-md border-t border-slate-100 px-4 pt-3 pb-7 flex justify-between items-center z-40 touch-pan-y"
+    >
       {tabs.map((tab) => {
         const isSelected = activeTab === tab;
+        const isCyan = isSelected && tab === 'home' && homeZone === 'wallet';
 
         return (
           <button
@@ -61,24 +75,12 @@ export default function NavBar({ activeTab, onTabChange }: NavBarProps) {
           >
             <span
               className={`p-2 rounded-full transition-colors flex items-center justify-center ${
-                isSelected ? 'bg-slate-100 text-[#FF9F1C]' : 'text-slate-400 hover:bg-slate-50'
+                isSelected
+                  ? `bg-slate-100 ${isCyan ? 'text-cyan-500' : 'text-[#FF9F1C]'}`
+                  : 'text-slate-400 hover:bg-slate-50'
               }`}
-            >
-              {tab === 'tracker' ? (
-                <svg
-                  className="w-5 h-5"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  viewBox="0 0 24 24"
-                  aria-label="Money tracker"
-                >
-                  <path d="M3 3v18h18" />
-                  <path d="M7 15l4-6 3 3 5-8" />
-                </svg>
-              ) : (
+            > 
                 <NavGlyph type={tab as Tab} />
-              )}
             </span>
           </button>
         );

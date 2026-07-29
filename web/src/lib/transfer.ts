@@ -220,6 +220,7 @@ async function runTransfer(
       source: 'local',
       hash,
       status: 'confirmed',
+      vaultId: operation === 'transfer' ? undefined : dbVaultId, 
     });
 
     if (options.onCompleted) {
