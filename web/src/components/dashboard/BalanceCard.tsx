@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useState } from 'react';
 import { EyeIcon } from '@/app/icons';
 
 interface BalanceCardProps {
@@ -71,6 +71,35 @@ function WaveAnimation() {
   );
 }
 
+/** Diagonal light sheen across the top of the card — static, subtle, non-animated. */
+function Glare() {
+  return (
+    <div
+      className="absolute inset-0 pointer-events-none select-none"
+      style={{
+        background:
+          'linear-gradient(115deg, rgba(255,255,255,0.22) 0%, rgba(255,255,255,0.06) 22%, rgba(255,255,255,0) 40%)',
+      }}
+    />
+  );
+}
+
+/** Diagonal light band that sweeps across the card on hover or touch, via background-position
+ *  on a full-bleed gradient so there's no hard rectangular edge to the moving band. */
+function Shine({ active }: { active: boolean }) {
+  return (
+    <div
+      className="absolute inset-0 pointer-events-none select-none transition-[background-position] duration-1600 ease-out"
+      style={{
+        backgroundImage:
+          'linear-gradient(115deg, transparent 0%, transparent 40%, rgba(255,255,255,0.32) 50%, transparent 60%, transparent 100%)',
+        backgroundSize: '300% 300%',
+        backgroundPosition: active ? '-50% 0%' : '150% 0%',
+      }}
+    />
+  );
+}
+
 export default function BalanceCard({
   label,
   loading,
@@ -88,27 +117,48 @@ export default function BalanceCard({
   const swipeTransform = `translate3d(${dragX}px, 0, 0)`;
   const opacity = exiting ? 0 : 1 - Math.min(0.2, Math.abs(dragX) / 800);
 
+  const [shining, setShining] = useState(false);
+
+  const callBoth = (fn: unknown, extra: () => void) => (event: unknown) => {
+    if (typeof fn === 'function') fn(event);
+    extra();
+  };
+
   return (
     <div
       {...swipeProps}
+      onMouseEnter={() => setShining(true)}
+      onMouseLeave={() => setShining(false)}
+      onTouchStart={callBoth(swipeProps?.onTouchStart, () => setShining(true))}
+      onTouchEnd={callBoth(swipeProps?.onTouchEnd, () => setShining(false))}
+      onTouchCancel={callBoth(swipeProps?.onTouchCancel, () => setShining(false))}
       className={`p-6 rounded-3xl text-white relative overflow-hidden animate-fadeIn touch-none ${gradientClassName} ${shadowClassName}`}
       style={{
         transform: swipeTransform,
-        transition: dragging 
-          ? 'none' 
+        transition: dragging
+          ? 'none'
           : 'transform 300ms cubic-bezier(0.2, 0.8, 0.2, 1), opacity 300ms ease',
         opacity,
         willChange: 'transform, opacity',
       }}
     >
+      <Glare />
+      <Shine active={shining} />
       <WaveAnimation />
 
-      <div className="space-y-2 relative z-10">
+      <div className="relative z-10">
         <div className="flex items-center justify-between">
           <span className="text-[11px] tracking-[0.14em] uppercase font-semibold text-white/80">{label}</span>
+          <button
+            onClick={onToggleBalance}
+            className="w-8 h-8 rounded-full bg-white/15 hover:bg-white/25 flex items-center justify-center transition-colors shrink-0"
+            aria-label="Toggle balance visibility"
+          >
+            <EyeIcon className="w-3.5 h-3.5" />
+          </button>
         </div>
 
-        <div className="flex items-baseline gap-1.5 mt-3">
+        <div className="flex items-baseline gap-1.5 mt-4">
           <span className="text-lg font-semibold text-white/85">₱</span>
           {loading ? (
             <h1 className="text-xl font-light text-white/60">Loading…</h1>
@@ -117,16 +167,9 @@ export default function BalanceCard({
               {showBalance ? phpAmount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '••••••'}
             </h1>
           )}
-          <button
-            onClick={onToggleBalance}
-            className="w-6 h-6 rounded-full bg-white/20 hover:bg-white/30 flex items-center justify-center transition-colors shrink-0 self-center"
-            aria-label="Toggle balance visibility"
-          >
-            <EyeIcon className="w-3.5 h-3.5" />
-          </button>
         </div>
 
-        <span className="text-xs font-medium tracking-wide text-white/80 flex items-center gap-1.5 pt-1">
+        <span className="text-xs font-medium tracking-wide text-white/80 flex items-center gap-1.5 pt-2">
           {showBalance ? `≈ ${usdcAmount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} USDC` : '•••••• USDC'}
         </span>
       </div>
