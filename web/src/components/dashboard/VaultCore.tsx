@@ -9,23 +9,23 @@ export interface VaultCoreMember {
 }
 
 interface VaultCoreProps {
-  goalProgress?: number;     // 0–100
-  vaultLevel?: number;
+  hasVault: boolean;         // false when the account has no vault yet — drives the empty state
+  goalProgress?: number;     // 0–100, real progress from vaultSummary
+  vaultLevel?: number;       // optional override; derived from goalProgress when omitted
   vaultName?: string;
   targetLabel?: string;      // e.g. "₱15,000 of ₱25,000"
-  members?: VaultCoreMember[]; // omit/empty for personal vaults
+  members?: VaultCoreMember[]; // real collaborators; omit/empty for personal vaults
   onViewDetails?: () => void;
+  onCreateVault?: () => void; // shown in the empty state when there's no vault yet
 }
 
 const MEMBER_COLORS = ['bg-[#FF9F1C]', 'bg-cyan-500', 'bg-slate-700', 'bg-amber-500'];
 
-// TODO: hardcoded example data — replace with real values from vaultSummary / state
-// once the contract read layer exposes a goal target + member list.
-const EXAMPLE_MEMBERS: VaultCoreMember[] = [
-  { id: '1', initial: 'M' },
-  { id: '2', initial: 'J' },
-  { id: '3', initial: 'S' },
-];
+/** Derives a 1–5 "level" from real goal progress so callers don't need to
+ *  compute or hardcode it themselves. */
+function levelFromProgress(progress: number) {
+  return Math.max(1, Math.min(5, Math.ceil(progress / 20) || 1));
+}
 
 function LockIcon({ className }: { className?: string }) {
   return (
@@ -75,7 +75,7 @@ function VaultDoorCore({
       </svg>
 
       {/* Vault door rivets, sit just inside the ring */}
-      <svg className="absolute w-[184px] h-[184px]" viewBox="0 0 184 184">
+      <svg className="absolute w-46 h-46" viewBox="0 0 184 184">
         {[...Array(rivetCount)].map((_, i) => {
           const angle = (i / rivetCount) * 2 * Math.PI;
           const x = 92 + 84 * Math.cos(angle);
@@ -108,21 +108,52 @@ function VaultDoorCore({
 }
 
 export default function VaultCore({
-  goalProgress = 72,
-  vaultLevel = 3,
-  vaultName = 'Emergency Fund',
-  targetLabel = '₱18,000 of ₱25,000',
-  members = EXAMPLE_MEMBERS,
+  hasVault,
+  goalProgress = 0,
+  vaultLevel,
+  vaultName = 'No vault yet',
+  targetLabel,
+  members = [],
   onViewDetails,
+  onCreateVault,
 }: VaultCoreProps) {
   const [isExpanded, setIsExpanded] = useState(false);
 
   const clampedProgress = Math.max(0, Math.min(100, goalProgress));
+  const resolvedLevel = vaultLevel ?? levelFromProgress(clampedProgress);
   const radius = 80;
   const circumference = 2 * Math.PI * radius;
   const strokeDashoffset = circumference - (clampedProgress / 100) * circumference;
 
   const orbitMembers = members.slice(0, 3);
+
+  if (!hasVault) {
+    return (
+      <div className="relative flex flex-col items-center justify-center select-none w-full font-sans tracking-tight">
+        <div className="relative w-64 h-64 flex items-center justify-center">
+          <div className="absolute inset-0 rounded-full bg-linear-to-br from-slate-100 to-slate-50 blur-2xl" />
+          <div
+            className="relative z-10 w-36 h-36 rounded-full flex flex-col items-center justify-center border border-slate-200 shadow-[inset_0_1px_2px_rgba(255,255,255,0.9)]"
+            style={{
+              background: 'radial-gradient(circle at 32% 28%, #ffffff 0%, #f8fafc 45%, #f1f5f9 100%)',
+            }}
+          >
+            <LockIcon className="w-4 h-4 text-slate-300 mb-1" />
+            <p className="text-[11px] font-medium text-slate-400 mt-1 text-center px-4">No vault yet</p>
+          </div>
+        </div>
+
+        {onCreateVault && (
+          <button
+            onClick={onCreateVault}
+            className="mt-4 px-6 py-2.5 rounded-full bg-[#FF9F1C] text-white text-xs font-semibold active:scale-[0.98] transition-transform"
+          >
+            Create a vault
+          </button>
+        )}
+      </div>
+    );
+  }
 
   return (
     <div className="relative flex flex-col items-center justify-center select-none w-full font-sans tracking-tight">
@@ -154,7 +185,7 @@ export default function VaultCore({
           radius={radius}
           circumference={circumference}
           strokeDashoffset={strokeDashoffset}
-          vaultLevel={vaultLevel}
+          vaultLevel={resolvedLevel}
           clampedProgress={clampedProgress}
         />
       </button>
@@ -184,7 +215,7 @@ export default function VaultCore({
               radius={radius}
               circumference={circumference}
               strokeDashoffset={strokeDashoffset}
-              vaultLevel={vaultLevel}
+              vaultLevel={resolvedLevel}
               clampedProgress={clampedProgress}
             />
 

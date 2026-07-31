@@ -48,6 +48,12 @@ model User {
   sentTransfers     PendingTransfer[] @relation("SentTransfers")
   receivedTransfers PendingTransfer[] @relation("ReceivedTransfers")
 
+  ownedContacts Contact[] @relation("OwnedContacts")
+  contactOf     Contact[] @relation("ContactOf")
+
+  sentMessages     Message[] @relation("SentMessages")
+  receivedMessages Message[] @relation("ReceivedMessages")
+
   trustScore                Int @default(0)
   savingsGoalsCompleted     Int @default(0)
   onTimeDeposits            Int @default(0)
@@ -76,6 +82,7 @@ model Vault {
   logs        ActivityLog[]
   members     VaultMember[]
   proposals VaultProposal []
+  withdrawalRequests WithdrawalRequest[]
 
   @@unique([contractAddress, onChainVaultId])
 }
@@ -102,6 +109,33 @@ model VaultProposalApproval {
   proposal VaultProposal @relation(fields: [proposalId], references: [id])
 
   @@unique([proposalId, pubkey])
+}
+
+model WithdrawalRequest {
+  id              String   @id @default(cuid())
+  vaultId         String
+  onChainRequestId BigInt  // request_id returned by request_withdrawal on-chain
+  requesterPubkey String
+  recipientPubkey String
+  amount          Float
+  status          String   @default("pending") // pending | executed
+  createdAt       DateTime @default(now())
+
+  vault     Vault                 @relation(fields: [vaultId], references: [id])
+  approvals WithdrawalApproval[]
+
+  @@unique([vaultId, onChainRequestId])
+}
+
+model WithdrawalApproval {
+  id        String   @id @default(cuid())
+  requestId String
+  pubkey    String
+  createdAt DateTime @default(now())
+
+  request WithdrawalRequest @relation(fields: [requestId], references: [id])
+
+  @@unique([requestId, pubkey])
 }
 
 model VaultMember {
@@ -193,4 +227,32 @@ model OtpVerification {
   createdAt DateTime @default(now())
 
   @@index([phone])
+}
+
+model Contact {
+id            String   @id @default(cuid())
+ownerPubkey   String
+contactPubkey String
+label         String?
+createdAt     DateTime @default(now())
+
+owner   User @relation("OwnedContacts", fields: [ownerPubkey], references: [pubkey])
+contact User @relation("ContactOf", fields: [contactPubkey], references: [pubkey])
+
+@@unique([ownerPubkey, contactPubkey])
+}
+
+model Message {
+  id            String   @id @default(cuid())
+  senderPubkey  String
+  recipientPubkey String
+  body          String
+  read          Boolean  @default(false)
+  createdAt     DateTime @default(now())
+
+  sender    User @relation("SentMessages", fields: [senderPubkey], references: [pubkey])
+  recipient User @relation("ReceivedMessages", fields: [recipientPubkey], references: [pubkey])
+
+  @@index([senderPubkey, recipientPubkey])
+  @@index([recipientPubkey, senderPubkey])
 }

@@ -8,6 +8,7 @@ interface HistoryProps {
   history: HistoryEntry[];
   loading: boolean;
   onRefresh: () => void;
+  onSelectEntry?: (entry: HistoryEntry) => void;
 }
 
 function entryVisual(kind: string) {
@@ -23,12 +24,27 @@ function entryVisual(kind: string) {
   }
 }
 
-export default function History({ history, loading, onRefresh }: HistoryProps) {
-  // Determine state color based on activity and actions needed
+function HistorySkeletonRow() {
+  return (
+    <div className="p-6 rounded-3xl bg-white border border-slate-200/60 shadow-md shadow-slate-900/5 flex items-center gap-4 animate-pulse">
+      <div className="w-10 h-10 rounded-full bg-slate-100 shrink-0" />
+      <div className="flex-1 min-w-0 space-y-2">
+        <div className="h-3 w-2/5 rounded-full bg-slate-100" />
+        <div className="h-2.5 w-3/5 rounded-full bg-slate-100" />
+      </div>
+      <div className="shrink-0 space-y-2">
+        <div className="h-3 w-12 rounded-full bg-slate-100 ml-auto" />
+        <div className="h-2.5 w-16 rounded-full bg-slate-100 ml-auto" />
+      </div>
+    </div>
+  );
+}
+
+export default function History({ history, loading, onRefresh, onSelectEntry }: HistoryProps) {
   const getIconColorClass = () => {
     if (loading) return 'text-cyan-500 animate-spin';
-    if (history.length === 0) return 'text-orange-500'; // Needs action / empty warning
-    return 'text-slate-400'; // Inactive / resting
+    if (history.length === 0) return 'text-orange-500';
+    return 'text-slate-400';
   };
 
   return (
@@ -45,16 +61,37 @@ export default function History({ history, loading, onRefresh }: HistoryProps) {
         </button>
       </div>
       
-      <div className="space-y-3 max-h-[520px] overflow-y-auto pr-1">
-        {history.length === 0 ? (
+      <div className="space-y-3 max-h-130 overflow-y-auto pr-1">
+        {loading && history.length === 0 ? (
+          Array.from({ length: 4 }).map((_, i) => <HistorySkeletonRow key={i} />)
+        ) : history.length === 0 ? (
           <p className="p-6 rounded-3xl bg-white border border-slate-200/60 text-xs font-normal text-slate-400 text-center shadow-md shadow-slate-900/5">
             No localized network block events recorded on this public key.
           </p>
         ) : (
-          history.map((entry) => {
+          <div className={`space-y-3 transition-opacity duration-300 ${loading ? 'opacity-50 pointer-events-none' : ''}`}>
+          {history.map((entry) => {
             const v = entryVisual(entry.kind);
+            const isClickable = Boolean(onSelectEntry);
+            const handleClick = () => {
+              if (isClickable) {
+                onSelectEntry?.(entry);
+              }
+            };
+
             return (
-              <div key={entry.id} className="p-6 rounded-3xl bg-white border border-slate-200/60 shadow-md shadow-slate-900/5 flex items-center gap-4">
+              <button
+                key={entry.id}
+                type="button"
+                onClick={handleClick}
+                onPointerDown={(event) => event.stopPropagation()}
+                onPointerUp={(event) => event.stopPropagation()}
+                onMouseDown={(event) => event.stopPropagation()}
+                onTouchStart={(event) => event.stopPropagation()}
+                className={`w-full p-6 rounded-3xl bg-white border border-slate-200/60 shadow-md shadow-slate-900/5 flex items-center gap-4 text-left ${
+                  isClickable ? 'cursor-pointer hover:border-slate-300 transition-colors' : 'cursor-default'
+                }`}
+              >
                 <div className={`w-10 h-10 rounded-full ${v.bg} ${v.fg} flex items-center justify-center shrink-0 font-bold shadow-inner text-sm`}>
                   {v.icon}
                 </div>
@@ -69,9 +106,10 @@ export default function History({ history, loading, onRefresh }: HistoryProps) {
                     {new Date(entry.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                   </p>
                 </div>
-              </div>
+              </button>
             );
-          })
+          })}
+          </div>
         )}
       </div>
     </div>
