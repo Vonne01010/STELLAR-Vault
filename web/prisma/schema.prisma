@@ -59,6 +59,9 @@ model User {
   onTimeDeposits            Int @default(0)
   collaborativeVaultsCount  Int @default(0)
   disputesCount             Int @default(0)
+
+  referralsMade Referral[] @relation("ReferralsMade")
+  referredBy    Referral?  @relation("ReferredBy")
 }
 
 model Vault {
@@ -227,6 +230,17 @@ model OtpVerification {
   createdAt DateTime @default(now())
 
   @@index([phone])
+}
+
+model Referral {
+  id             String   @id @default(cuid())
+  referrerPubkey String
+  refereePubkey  String   @unique // one referral relationship per new user
+  pointsAwarded  Int      @default(0)
+  createdAt      DateTime @default(now())
+
+  referrer User @relation("ReferralsMade", fields: [referrerPubkey], references: [pubkey])
+  referee  User @relation("ReferredBy", fields: [refereePubkey], references: [pubkey])
 }
 
 model Contact {
