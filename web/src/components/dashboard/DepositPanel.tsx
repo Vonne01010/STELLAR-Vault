@@ -28,10 +28,10 @@ export default function DepositPanel({
 
   return (
     <div className="rounded-2xl bg-white border border-slate-100 p-5 text-[#1A1A1A] space-y-4 animate-fadeIn">
-      <span className="block text-[10px] uppercase tracking-wider text-slate-400 font-light">Deposit</span>
+      <span className="block text-[11px] uppercase tracking-wide text-slate-500 font-semibold">Deposit</span>
 
       <div className="space-y-1.5">
-        <label htmlFor="deposit-amount" className="block text-[10px] uppercase tracking-wider text-slate-400 font-light">
+        <label htmlFor="deposit-amount" className="block text-[11px] uppercase tracking-wide text-slate-500 font-semibold">
           Amount
         </label>
         <div className="relative flex items-center">
@@ -42,11 +42,13 @@ export default function DepositPanel({
             onChange={(e) => onDepositAmountChange(e.target.value)}
             placeholder="0.00"
             disabled={busy}
-            className="w-full rounded-xl bg-slate-50 border border-slate-100 pl-4 pr-16 py-3 text-sm text-slate-800 outline-none focus:border-[#A0F0F0] focus:bg-white disabled:opacity-50 transition-colors"
+            className="w-full rounded-xl bg-slate-50 border border-slate-100 pl-4 pr-20 py-3.5 text-2xl font-semibold tabular-nums text-slate-800 outline-none focus:border-[#A0F0F0] focus:bg-white disabled:opacity-50 transition-colors placeholder:text-slate-300"
           />
-          <span className="absolute right-4 text-[10px] text-slate-400 font-light">USDC</span>
+          <span className="absolute right-3.5 text-[10px] font-bold uppercase tracking-wide text-slate-500 bg-white border border-slate-200 rounded-full px-2 py-1">
+            USDC
+          </span>
         </div>
-        <p className="text-right text-[10px] text-slate-400 font-light px-1">
+        <p className="text-right text-[11px] text-slate-400 font-medium px-1">
           ≈ ₱{depositValue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
         </p>
       </div>
@@ -54,7 +56,7 @@ export default function DepositPanel({
       <button
         onClick={onDeposit}
         disabled={busy || loading || !depositAmount || Number(depositAmount) <= 0}
-        className="w-full py-3.5 rounded-xl bg-linear-to-r from-[#FF9F1C] to-[#F37A00] text-white text-[10px] uppercase tracking-widest hover:opacity-95 transition-opacity disabled:opacity-40 flex items-center justify-center gap-2"
+        className="w-full py-3.5 rounded-xl bg-linear-to-r from-[#FF9F1C] to-[#F37A00] text-white text-xs font-bold uppercase tracking-widest hover:opacity-95 transition-opacity disabled:opacity-40 flex items-center justify-center gap-2 shadow-sm shadow-orange-900/10"
       >
         {busy && <Spinner className="animate-spin h-3 w-3 text-white" />}
         <span>{busy ? 'Processing…' : 'Deposit USDC'}</span>

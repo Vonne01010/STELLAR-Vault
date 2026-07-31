@@ -133,7 +133,7 @@ export default function Home() {
             </p>
             <p className="text-[11px] font-semibold text-slate-400 leading-relaxed max-w-xs mx-auto">
               Link your Freighter wallet to see your balance and start saving.
-              Don't have it yet?{' '}
+              Don&apos;t have it yet?{' '}
               <a href="https://freighter.app"
                 target="_blank"
                 rel="noopener noreferrer"
@@ -172,7 +172,7 @@ export default function Home() {
         {/* Brand System Footer Deck Layout */}
         <div className="flex flex-col items-center space-y-4 pt-12">
           <span className="text-[10px] font-normal text-slate-400 tracking-normal">
-            © 2026 Team Ada's Lovelies. All rights reserved.
+            © 2026 Solaria Innovations. All rights reserved.
           </span>
         </div>
       </div>

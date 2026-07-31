@@ -43,7 +43,7 @@ export async function POST(request: Request) {
     await prisma.notification.create({
       data: {
         pubkey: recipientPubkey,
-        message: `New transfer request: ${amount} USDC awaiting your approval.`,
+        message: `New transfer request: ${amount.toFixed(2)} USDC awaiting your approval.`,
         vaultId: null,
         variant: "action_required",
         meta: {
@@ -57,15 +57,14 @@ export async function POST(request: Request) {
       console.error("Failed to create recipient notification for transfer:", err)
     })
 
-    // NEW — notify the sender that their request was sent and is pending
     await prisma.notification.create({
       data: {
         pubkey: auth.pubkey,
-        message: `Transfer request sent: ${amount} USDC, awaiting the recipient's approval.`,
+        message: `Transfer request created: ${amount.toFixed(2)} USDC to ${recipientPubkey}. Your signature is required to proceed.`,
         vaultId: null,
-        variant: "info",
+        variant: "action_required",
         meta: {
-          event: "transfer_requested_sent",
+          event: "transfer_requested_sender",
           transferId: transfer.id,
           recipientPubkey,
           timestamp: new Date().toISOString(),

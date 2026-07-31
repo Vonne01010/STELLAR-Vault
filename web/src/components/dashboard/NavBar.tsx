@@ -2,8 +2,9 @@
 
 import React from 'react';
 import type { Tab } from '@/lib/dashboardTypes';
+import { useSwipeX } from '@/lib/useSwipeX';
 
-export type AppTab = Tab | 'tracker';
+export type AppTab = Tab | 'tracker' | 'contacts';
 
 /** currentColor-based glyphs so the active tab's orange color can be set by the wrapper. */
 function NavGlyph({ type }: { type: Tab }) {
@@ -26,8 +27,18 @@ function NavGlyph({ type }: { type: Tab }) {
   if (type === 'vaults') {
     return (
       <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-        <rect x="3" y="7" width="18" height="13" rx="2"></rect>
-        <path d="M8 7V5a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+        <rect x="4" y="10" width="16" height="12" rx="2"></rect>
+        <path d="M7 10V7a5 5 0 0 1 10 0v3"></path>
+      </svg>
+    );
+  }
+  if (type === 'contacts') {
+    return (
+      <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+        <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+        <circle cx="9" cy="7" r="4"></circle>
+        <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
+        <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
       </svg>
     );
   }
@@ -40,45 +51,61 @@ function NavGlyph({ type }: { type: Tab }) {
   );
 }
 
+const TAB_LABELS: Record<Tab, string> = {
+  home: 'Home',
+  vaults: 'Vaults',
+  activity: 'Activity',
+  profile: 'Profile',
+  contacts: 'Contacts',
+};
+
 interface NavBarProps {
   activeTab: AppTab;
   onTabChange: (tab: AppTab) => void;
+  /** Which home sub-zone is active, so the Home icon can reflect it (orange = vault, cyan = wallet). */
+  homeZone?: 'vault' | 'wallet';
 }
 
-export default function NavBar({ activeTab, onTabChange }: NavBarProps) {
-  const tabs: AppTab[] = ['home', 'vaults', 'tracker', 'activity', 'profile'];
+export default function NavBar({ activeTab, onTabChange, homeZone = 'vault' }: NavBarProps) {
+  const tabs: AppTab[] = ['home', 'vaults', 'contacts', 'activity', 'profile'];
+
+  const changeTab = (direction: 1 | -1) => {
+    const idx = tabs.indexOf(activeTab);
+    const next = idx + direction;
+    if (next >= 0 && next < tabs.length) onTabChange(tabs[next]);
+  };
+  const swipeHandlers = useSwipeX(() => changeTab(1), () => changeTab(-1));
 
   return (
-    <div className="absolute bottom-0 inset-x-0 bg-white/95 backdrop-blur-md border-t border-slate-100 px-4 pt-3 pb-7 flex justify-between items-center z-40">
+    <div
+      {...swipeHandlers}
+      className="absolute bottom-0 inset-x-0 bg-white/95 backdrop-blur-md border-t border-slate-100 px-4 pt-3 pb-7 flex justify-between items-end z-40 touch-pan-y"
+    >
       {tabs.map((tab) => {
         const isSelected = activeTab === tab;
+        const isCyan = isSelected && tab === 'home' && homeZone === 'wallet';
 
         return (
           <button
             key={tab}
             onClick={() => onTabChange(tab)}
-            className="flex-1 flex items-center justify-center"
+            className="flex-1 flex flex-col items-center justify-end gap-1"
           >
             <span
-              className={`p-2 rounded-full transition-colors flex items-center justify-center ${
-                isSelected ? 'bg-slate-100 text-[#FF9F1C]' : 'text-slate-400 hover:bg-slate-50'
+              className={`flex items-center justify-center transition-all ${
+                isSelected
+                  ? `w-11 h-11 rounded-full -mt-5 shadow-lg text-white ${isCyan ? 'bg-cyan-500 shadow-cyan-500/30' : 'bg-[#FF9F1C] shadow-[#FF9F1C]/30'}`
+                  : 'w-9 h-9 rounded-full text-slate-400'
               }`}
             >
-              {tab === 'tracker' ? (
-                <svg
-                  className="w-5 h-5"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  viewBox="0 0 24 24"
-                  aria-label="Money tracker"
-                >
-                  <path d="M3 3v18h18" />
-                  <path d="M7 15l4-6 3 3 5-8" />
-                </svg>
-              ) : (
-                <NavGlyph type={tab as Tab} />
-              )}
+              <NavGlyph type={tab} />
+            </span>
+            <span
+              className={`text-[10px] font-medium tracking-wide ${
+                isSelected ? (isCyan ? 'text-cyan-500' : 'text-[#FF9F1C]') : 'text-slate-400'
+              }`}
+            >
+              {TAB_LABELS[tab]}
             </span>
           </button>
         );

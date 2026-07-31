@@ -48,7 +48,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
         prisma.notification.create({
           data: {
             pubkey: transfer.senderPubkey,
-            message: `Transfer of ${transfer.amount} USDC approved by both parties. Ready to send.`,
+            message: `Transfer of ${(transfer.amount).toFixed(2)} USDC approved by both parties. Ready to send.`,
             vaultId: null,
             variant: "success",
             meta: { event: "transfer_ready", transferId: id, timestamp: new Date().toISOString() },
@@ -57,7 +57,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
         prisma.notification.create({
           data: {
             pubkey: transfer.recipientPubkey,
-            message: `Transfer of ${transfer.amount} USDC approved by both parties. Ready to be sent to you.`,
+            message: `Transfer of ${(transfer.amount).toFixed(2)} USDC approved by both parties. Ready to be sent to you.`,
             vaultId: null,
             variant: "success",
             meta: { event: "transfer_ready", transferId: id, timestamp: new Date().toISOString() },
@@ -68,7 +68,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
       await prisma.notification.create({
         data: {
           pubkey: counterpartyPubkey,
-          message: `The ${approverRole} approved the ${transfer.amount} USDC transfer request. Waiting on your approval.`,
+          message: `The ${approverRole} approved the ${Number(transfer.amount).toFixed(2)} USDC transfer request. Waiting on your approval.`,
           vaultId: null,
           variant: "action_required",
           meta: { event: "transfer_partial_approval", transferId: id, approverRole, timestamp: new Date().toISOString() },
@@ -103,12 +103,11 @@ export async function DELETE(request: Request, { params }: { params: Promise<{ i
 
     await prisma.pendingTransfer.delete({ where: { id } })
 
-    // NEW
     const counterpartyPubkey = auth.pubkey === transfer.senderPubkey ? transfer.recipientPubkey : transfer.senderPubkey
     await prisma.notification.create({
       data: {
         pubkey: counterpartyPubkey,
-        message: `The ${transfer.amount} USDC transfer request was cancelled.`,
+        message: `The ${Number(transfer.amount).toFixed(2)} USDC transfer request was cancelled.`,
         vaultId: null,
         variant: "warning",
         meta: { event: "transfer_cancelled", transferId: id, timestamp: new Date().toISOString() },
