@@ -134,6 +134,8 @@ export default function SavingsDashboard({ publicKey, wallet, onLogout, headerAc
   const [pendingApprovals, setPendingApprovals] = useState<PendingTransferApproval[]>([]);
   const [pendingLoading, setPendingLoading] = useState(false);
 
+  const [referralCode, setReferralCode] = useState<string | undefined>(undefined);
+
   const safeNumber = (v: unknown): number => {
     const n = Number(v);
     return isFinite(n) ? n : 0;
@@ -191,6 +193,7 @@ export default function SavingsDashboard({ publicKey, wallet, onLogout, headerAc
       setPoints(d.points ?? 0);
       setVaultsCount(d.vaultsCount ?? 0);
       setLevel2GateUnlocked(d.level2GateUnlocked ?? false);
+      setReferralCode(d.referralCode ?? undefined);
     }).catch(() => {
       setProfile(null); setTrust(null); setPoints(0); setVaultsCount(0);
     });
@@ -586,6 +589,7 @@ const handleVoidPendingApproval = async (id: string) => {
                 onCopyAddress={handleCopyAddress} wallet={wallet} loading={loading} onRefresh={refresh}
                 onOpenSettings={() => router.push('/settings')} username={username ?? profile?.displayName ?? undefined} avatarSrc={avatarSrc}
                 points={points} vaultsCount={vaultsCount} phoneVerified={profile?.phoneVerified}
+                referralCode={referralCode}
                 phoneNumber={profile?.phoneNumber ?? undefined}
                 identityVerified={(profile?.verificationLevel ?? 1) >= 2}
                 communityTrustUnlocked={(profile?.verificationLevel ?? 1) >= 3}

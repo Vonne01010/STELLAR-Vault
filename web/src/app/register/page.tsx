@@ -44,6 +44,10 @@ export default function RegisterPage() {
   const [otpLoading, setOtpLoading] = useState(false);
   const [resendCooldown, setResendCooldown] = useState(0);
 
+  //referral 
+  const [referralValid, setReferralValid] = useState<boolean | null>(null);
+  const [referralChecking, setReferralChecking] = useState(false);
+
   function handleAccountCreated(key: string) {
     setPublicKey(key);
     setStep('profile');
@@ -79,6 +83,10 @@ export default function RegisterPage() {
     if (!displayName.trim()) return setProfileError('Display name is required');
     if (!phone.trim() || phone.length < 10) return setProfileError('A valid mobile number is required');
     if (!tosAccepted) return setProfileError('Please accept the terms to continue');
+    setProfileError('');
+    if (referralCode && referralValid === false) {
+      return setProfileError('That referral code doesn\'t look right — clear it or fix it to continue');
+    }
     setProfileError('');
 
     setOtpCode('');
@@ -128,6 +136,7 @@ export default function RegisterPage() {
           avatarUrl: profilePicture ?? undefined,
           country,
           email: email || undefined,
+          referralCode: referralCode || undefined,
           phoneVerified: true,
           tosAccepted: true,
         }),
@@ -153,6 +162,26 @@ export default function RegisterPage() {
     const t = setInterval(() => setResendCooldown((s) => Math.max(0, s - 1)), 1000);
     return () => clearInterval(t);
   }, [resendCooldown]);
+
+    useEffect(() => {
+    if (!referralCode) {
+      setReferralValid(null);
+      return;
+    }
+    const t = setTimeout(async () => {
+      setReferralChecking(true);
+      try {
+        const res = await fetch(`/api/referrals/check?code=${encodeURIComponent(referralCode)}`);
+        const data = await res.json();
+        setReferralValid(res.ok && data.valid);
+      } catch {
+        setReferralValid(null);
+      } finally {
+        setReferralChecking(false);
+      }
+    }, 400); // debounce so we're not hitting the API on every keystroke
+    return () => clearTimeout(t);
+  }, [referralCode]);
 
   const STEP_ORDER: OnboardStep[] = ['pin', 'profile', 'otp'];
 
@@ -293,6 +322,29 @@ export default function RegisterPage() {
                       className="flex-1 bg-white border border-slate-200 rounded-xl px-4 py-3 text-xs font-medium text-slate-700 focus:outline-none focus:border-amber-300"
                     />
                   </div>
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-[10px] font-medium uppercase tracking-wider text-slate-400">
+                    Referral code <span className="normal-case text-slate-300">(optional)</span>
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="e.g. MARIA123"
+                    value={referralCode}
+                    onChange={(e) => setReferralCode(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, ''))}
+                    maxLength={12}
+                    className="w-full bg-white border border-slate-200 rounded-xl px-4 py-3 text-xs font-medium text-slate-700 focus:outline-none focus:border-amber-300"
+                  />
+                  {referralChecking && (
+                    <p className="text-[10px] font-medium text-slate-300 pt-0.5">Checking code…</p>
+                  )}
+                  {!referralChecking && referralCode && referralValid === false && (
+                    <p className="text-[10px] font-medium text-red-400 pt-0.5">Code not found — you can still continue without it.</p>
+                  )}
+                  {!referralChecking && referralValid === true && (
+                    <p className="text-[10px] font-medium text-emerald-500 pt-0.5">Valid code ✓</p>
+                  )}
                 </div>
               </div>
 
