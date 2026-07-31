@@ -44,6 +44,7 @@ import WithdrawPanel from './WithdrawPanel';
 import SendPanel from './SendPanel';
 import type { Panel } from '@/lib/dashboardTypes';
 import type { UserProfile, TrustScore } from '@/lib/auth/verification';
+import Contacts from '@/components/contacts/Contacts';
 
 const STELLAR_ADDRESS_RE = /^G[A-Z2-7]{55}$/;
 
@@ -578,6 +579,20 @@ export default function SavingsDashboard({ publicKey, wallet, onLogout, headerAc
                 focusVaultId={focusVaultId}
                 onFocusHandled={() => setFocusVaultId(null)}
                 onFocusVaultNotFound={() => showToast('This vault is no longer available.', 'error')}
+              />
+            </div>
+          )}
+
+          {activeTab === 'contacts' && (
+            <div className="pt-8">
+              <Contacts
+                publicKey={publicKey}
+                onSendToContact={(pubkey) => {
+                  setRecipient(pubkey);
+                  setHomeZone('wallet');
+                  setPanel('send');
+                  setActiveTab('home');
+                }}
               />
             </div>
           )}
