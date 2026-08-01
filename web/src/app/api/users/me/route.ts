@@ -21,7 +21,7 @@ export async function GET(request: Request) {
   const [user, vaultsCount] = await Promise.all([
     prisma.user.findUnique({
       where: { pubkey: auth.pubkey },
-      select: { points: true, level2GateUnlockedAt: true, level2GateUnlockMethod: true },
+      select: { points: true, level2GateUnlockedAt: true, level2GateUnlockMethod: true, referralCode: true },
     }),
     prisma.vaultMember.count({
       where: { pubkey: auth.pubkey, vault: { status: { not: "Closed" } } },
@@ -33,6 +33,7 @@ export async function GET(request: Request) {
     trust,
     points: user?.points ?? 0,
     vaultsCount,
+    referralCode: user?.referralCode ?? null,
     level2GateUnlocked: user?.level2GateUnlockedAt != null,
     level2GateUnlockMethod: user?.level2GateUnlockMethod ?? null,
   })
