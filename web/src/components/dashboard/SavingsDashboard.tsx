@@ -1,5 +1,6 @@
 'use client';
 
+import TestSep10 from '@/components/dev/TestSep10';
 import React, { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { fetchBalances, type Balances } from '@/lib/balances';
@@ -610,6 +611,7 @@ export default function SavingsDashboard({ publicKey, wallet, onLogout, headerAc
         />
         
       </div>
+      <TestSep10 publicKey={publicKey} />
     </BudgetProvider>
   );
 }
