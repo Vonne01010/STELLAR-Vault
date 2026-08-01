@@ -19,6 +19,9 @@ export async function discoverAnchor(homeDomain: string = ANCHOR_HOME_DOMAIN): P
   if (!toml.WEB_AUTH_ENDPOINT) {
     throw new Error(`${homeDomain} does not support SEP-10 authentication`);
   }
+  if (!toml.SIGNING_KEY) {
+  throw new Error(`${homeDomain} does not publish a SIGNING_KEY`);
+  }
 
   return {
     webAuthEndpoint: toml.WEB_AUTH_ENDPOINT,
@@ -28,6 +31,7 @@ export async function discoverAnchor(homeDomain: string = ANCHOR_HOME_DOMAIN): P
     currencies: (toml.CURRENCIES ?? []).map((c: { code: string; issuer?: string }) => ({
       code: c.code,
       issuer: c.issuer,
+      signingKey: toml.SIGNING_KEY,
     })),
   };
 }
