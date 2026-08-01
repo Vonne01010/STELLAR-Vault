@@ -69,6 +69,12 @@ export default function VaultManagePanel({ vault, isOwned, isMemberOnly, publicK
 
   const [pendingWithdrawalAction, setPendingWithdrawalAction] = useState<PendingWithdrawalAction>(null);
 
+  const [rotationDraft, setRotationDraft] = useState<string[]>([]);
+  const [rotationContribution, setRotationContribution] = useState('');
+  const [showRotationSetup, setShowRotationSetup] = useState(false);
+  const [settingRotation, setSettingRotation] = useState(false);
+  const [rotationError, setRotationError] = useState('');
+
   const loadManageData = useCallback(async () => {
     setManageLoading(true);
     setManageError('');
@@ -379,6 +385,47 @@ export default function VaultManagePanel({ vault, isOwned, isMemberOnly, publicK
     }
   };
 
+  const moveRotationMember = (index: number, direction: -1 | 1) => {
+    setRotationDraft((prev) => {
+      const next = [...prev];
+      const target = index + direction;
+      if (target < 0 || target >= next.length) return prev;
+      [next[index], next[target]] = [next[target], next[index]];
+      return next;
+    });
+  };
+
+  const openRotationSetup = () => {
+    setRotationDraft(members.map((m) => m.pubkey));
+    setRotationContribution('');
+    setRotationError('');
+    setShowRotationSetup(true);
+  };
+
+  const handleSetRotation = async () => {
+    setSettingRotation(true);
+    setRotationError('');
+    try {
+      const contributionAmount = Number(rotationContribution);
+      if (!contributionAmount || contributionAmount <= 0) {
+        throw new Error('Enter a valid per-round contribution amount.');
+      }
+      const res = await authFetch(`/api/vaults/${vault.id}/rotation`, {
+        method: 'POST',
+        body: JSON.stringify({ rotationOrder: rotationDraft, contributionAmount }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data?.error ?? 'Failed to set rotation order');
+      setShowRotationSetup(false);
+      await loadManageData();
+      onChanged();
+    } catch (e: unknown) {
+      setRotationError(e instanceof Error ? e.message : 'Failed to set rotation order');
+    } finally {
+      setSettingRotation(false);
+    }
+  };
+
   const pendingWithdrawalRequest = withdrawalRequests.find((r) => r.status === 'pending');
   const withdrawalMajorityCount = Math.floor(members.length / 2) + 1;
   const withdrawalReadyToExecute = pendingWithdrawalRequest
@@ -575,6 +622,89 @@ export default function VaultManagePanel({ vault, isOwned, isMemberOnly, publicK
         </div>
       )}
 
+      {/* Paluwagan rotation setup (owner, collaborative, not yet set) */}
+      {vault.vaultType === 'Collaborative' && isOwned && !vault.rotationOrder && (
+        <div className="space-y-1.5">
+          <p className="text-[10px] uppercase tracking-wider text-slate-400 font-semibold">Paluwagan Rotation (optional)</p>
+
+          {!showRotationSetup && (
+            <>
+              <button
+                onClick={openRotationSetup}
+                disabled={members.length < 2}
+                className="w-full py-2 rounded-lg bg-slate-50 border border-slate-100 text-[10px] uppercase tracking-wider text-slate-500 font-semibold disabled:opacity-40"
+              >
+                Set Up Rotation Order
+              </button>
+              {members.length < 2 && (
+                <p className="text-[10px] text-slate-400">Invite at least one more member first.</p>
+              )}
+            </>
+          )}
+
+          {showRotationSetup && (
+            <div className="rounded-xl border border-slate-100 p-3 space-y-2">
+              {rotationError && <p className="text-[10px] text-rose-500">{rotationError}</p>}
+
+              <p className="text-[10px] text-slate-400">Payout order (use ↑/↓ to reorder):</p>
+              <ul className="space-y-1">
+                {rotationDraft.map((pubkey, i) => (
+                  <li
+                    key={pubkey}
+                    className="flex items-center justify-between text-[11px] bg-slate-50 border border-slate-100 rounded-lg px-2 py-1.5"
+                  >
+                    <span className="font-mono text-slate-600">
+                      {i + 1}. {pubkey.slice(0, 6)}…{pubkey.slice(-4)}
+                    </span>
+                    <span className="flex gap-1">
+                      <button
+                        onClick={() => moveRotationMember(i, -1)}
+                        disabled={i === 0}
+                        className="px-1.5 py-0.5 rounded bg-slate-100 text-slate-500 disabled:opacity-30"
+                      >
+                        ↑
+                      </button>
+                      <button
+                        onClick={() => moveRotationMember(i, 1)}
+                        disabled={i === rotationDraft.length - 1}
+                        className="px-1.5 py-0.5 rounded bg-slate-100 text-slate-500 disabled:opacity-30"
+                      >
+                        ↓
+                      </button>
+                    </span>
+                  </li>
+                ))}
+              </ul>
+
+              <input
+                type="number"
+                placeholder="Fixed contribution per round"
+                value={rotationContribution}
+                onChange={(e) => setRotationContribution(e.target.value)}
+                className="w-full rounded-lg bg-slate-50 border border-slate-100 px-3 py-2 text-xs outline-none focus:border-[#A0F0F0]"
+              />
+
+              <div className="flex gap-2">
+                <button
+                  onClick={handleSetRotation}
+                  disabled={settingRotation || !rotationContribution}
+                  className="flex-1 py-2 rounded-lg bg-[#FF9F1C] text-white text-[10px] uppercase tracking-wider font-semibold disabled:opacity-50"
+                >
+                  {settingRotation ? 'Saving…' : 'Confirm Rotation'}
+                </button>
+                <button
+                  onClick={() => setShowRotationSetup(false)}
+                  disabled={settingRotation}
+                  className="px-3 py-2 rounded-lg bg-slate-50 border border-slate-100 text-[10px] uppercase tracking-wide text-slate-400"
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
       {/* Withdrawal requests (collaborative vaults) */}
       {vault.vaultType === 'Collaborative' && (
         <div className="space-y-1.5">
@@ -584,7 +714,15 @@ export default function VaultManagePanel({ vault, isOwned, isMemberOnly, publicK
 
           {!pendingWithdrawalRequest && !showRequestForm && (
             <button
-              onClick={() => setShowRequestForm(true)}
+              onClick={() => {
+                if (vault.rotationOrder && vault.contributionAmount) {
+                  const rotation = vault.rotationOrder;
+                  const nextRecipient = rotation[vault.currentRound ? vault.currentRound % rotation.length : 0];
+                  setRequestRecipient(nextRecipient);
+                  setRequestAmount(String(vault.contributionAmount * members.length));
+                }
+                setShowRequestForm(true);
+              }}
               className="w-full py-2 rounded-lg bg-slate-50 border border-slate-100 text-[10px] uppercase tracking-wider text-slate-500 font-semibold"
             >
               Request Withdrawal
@@ -599,15 +737,20 @@ export default function VaultManagePanel({ vault, isOwned, isMemberOnly, publicK
                 placeholder="Recipient public key"
                 value={requestRecipient}
                 onChange={(e) => setRequestRecipient(e.target.value)}
-                className="w-full rounded-lg bg-slate-50 border border-slate-100 px-3 py-2 text-xs outline-none focus:border-[#A0F0F0]"
+                disabled={Boolean(vault.rotationOrder)}
+                className="w-full rounded-lg bg-slate-50 border border-slate-100 px-3 py-2 text-xs outline-none focus:border-[#A0F0F0] disabled:opacity-60"
               />
               <input
                 type="number"
                 placeholder="Amount"
                 value={requestAmount}
                 onChange={(e) => setRequestAmount(e.target.value)}
-                className="w-full rounded-lg bg-slate-50 border border-slate-100 px-3 py-2 text-xs outline-none focus:border-[#A0F0F0]"
+                disabled={Boolean(vault.rotationOrder)}
+                className="w-full rounded-lg bg-slate-50 border border-slate-100 px-3 py-2 text-xs outline-none focus:border-[#A0F0F0] disabled:opacity-60"
               />
+              {vault.rotationOrder && (
+                <p className="text-[10px] text-slate-400">Locked to this round's rotation recipient and full pot amount.</p>
+              )}
               <div className="flex gap-2">
                 <button
                   onClick={() => handleRequestWithdrawal(requestRecipient, Number(requestAmount))}

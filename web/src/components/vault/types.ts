@@ -13,6 +13,7 @@ export interface VaultData {
   withdrawable?: boolean;
   rotationOrder?: string[] | null;
   contributionAmount?: number | null;
+  currentRound?: number | null;
 }
 
 export interface VaultsProps {

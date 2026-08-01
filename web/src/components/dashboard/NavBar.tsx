@@ -7,7 +7,7 @@ import { useSwipeX } from '@/lib/useSwipeX';
 export type AppTab = Tab | 'tracker' | 'contacts';
 
 /** currentColor-based glyphs so the active tab's orange color can be set by the wrapper. */
-function NavGlyph({ type }: { type: Tab }) {
+function NavGlyph({ type }: { type: AppTab }) {
   if (type === 'home') {
     return (
       <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
@@ -42,6 +42,15 @@ function NavGlyph({ type }: { type: Tab }) {
       </svg>
     );
   }
+  if (type === 'tracker') {
+    return (
+      <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+        <path d="M12 20V10"></path>
+        <path d="M18 20V4"></path>
+        <path d="M6 20v-4"></path>
+      </svg>
+    );
+  }
   // profile
   return (
     <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
@@ -51,12 +60,13 @@ function NavGlyph({ type }: { type: Tab }) {
   );
 }
 
-const TAB_LABELS: Record<Tab, string> = {
+const TAB_LABELS: Record<AppTab, string> = {
   home: 'Home',
   vaults: 'Vaults',
   activity: 'Activity',
   profile: 'Profile',
   contacts: 'Contacts',
+  tracker: 'Tracker',
 };
 
 interface NavBarProps {
