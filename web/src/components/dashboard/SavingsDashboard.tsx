@@ -44,6 +44,7 @@ import WithdrawPanel from './WithdrawPanel';
 import SendPanel from './SendPanel';
 import type { Panel } from '@/lib/dashboardTypes';
 import type { UserProfile, TrustScore } from '@/lib/auth/verification';
+import Contacts from '@/components/contacts/Contacts';
 
 const STELLAR_ADDRESS_RE = /^G[A-Z2-7]{55}$/;
 
@@ -177,6 +178,8 @@ export default function SavingsDashboard({ publicKey, wallet, onLogout, headerAc
   const [pendingApproval, setPendingApproval] = useState<PendingTransferApproval | null>(null);
   const [pendingLoading, setPendingLoading] = useState(false);
 
+  const [referralCode, setReferralCode] = useState<string | undefined>(undefined);
+
   const safeNumber = (v: unknown): number => {
     const n = Number(v);
     return isFinite(n) ? n : 0;
@@ -233,6 +236,7 @@ export default function SavingsDashboard({ publicKey, wallet, onLogout, headerAc
       setTrust(d.trust ?? null);
       setPoints(d.points ?? 0);
       setVaultsCount(d.vaultsCount ?? 0);
+      setReferralCode(d.referralCode ?? undefined);
     }).catch(() => {
       setProfile(null); setTrust(null); setPoints(0); setVaultsCount(0);
     });
@@ -564,6 +568,7 @@ export default function SavingsDashboard({ publicKey, wallet, onLogout, headerAc
                 onCopyAddress={handleCopyAddress} wallet={wallet} loading={loading} onRefresh={refresh}
                 onOpenSettings={() => router.push('/settings')} username={username ?? profile?.displayName ?? undefined} avatarSrc={avatarSrc}
                 points={points} vaultsCount={vaultsCount} phoneVerified={profile?.phoneVerified}
+                referralCode={referralCode}
                 phoneNumber={profile?.phoneNumber ?? undefined} identityVerified={profile?.alternativeIdVerified}
               />
             </div>
@@ -578,6 +583,20 @@ export default function SavingsDashboard({ publicKey, wallet, onLogout, headerAc
                 focusVaultId={focusVaultId}
                 onFocusHandled={() => setFocusVaultId(null)}
                 onFocusVaultNotFound={() => showToast('This vault is no longer available.', 'error')}
+              />
+            </div>
+          )}
+
+          {activeTab === 'contacts' && (
+            <div className="pt-8">
+              <Contacts
+                publicKey={publicKey}
+                onSendToContact={(pubkey) => {
+                  setRecipient(pubkey);
+                  setHomeZone('wallet');
+                  setPanel('send');
+                  setActiveTab('home');
+                }}
               />
             </div>
           )}

@@ -34,6 +34,7 @@ interface ProfileProps {
   handle?: string;
   vaultsCount?: number;
   points?: number;
+  referralCode?: string;
   avatarSrc?: string;
   phoneVerified?: boolean;
   phoneNumber?: string;
@@ -52,6 +53,7 @@ export default function Profile({
   handle = 'stella_user_882',
   vaultsCount = 12,
   points = 2450,
+  referralCode,
   avatarSrc = '/stellamascot.png',
   phoneVerified = true,
   phoneNumber = '+63 917 •• •• 213',
@@ -103,6 +105,15 @@ export default function Profile({
     } catch (e) {
       console.error('Level 3 upgrade failed', e);
     }
+  };
+
+  const [referralCopied, setReferralCopied] = useState(false);
+
+  const handleCopyReferral = () => {
+    if (!referralCode) return;
+    navigator.clipboard.writeText(referralCode);
+    setReferralCopied(true);
+    setTimeout(() => setReferralCopied(false), 1500);
   };
 
   return (
@@ -157,6 +168,22 @@ export default function Profile({
             <p className="text-base font-semibold text-slate-800 mt-0.5">{points.toLocaleString()}</p>
           </div>
         </div>
+
+        {referralCode && (
+          <div className="w-full max-w-xs bg-white border border-slate-200/60 rounded-2xl px-4 py-3 shadow-sm shadow-slate-900/5">
+            <p className="text-[10px] font-medium uppercase tracking-wider text-slate-400">Your referral code</p>
+            <div className="flex items-center justify-between mt-1">
+              <span className="text-base font-semibold text-slate-800 tracking-[0.2em]">{referralCode}</span>
+              <button
+                type="button"
+                onClick={handleCopyReferral}
+                className="text-xs font-semibold text-[#FF9F1C] hover:text-[#e65300] transition-colors cursor-pointer"
+              >
+                {referralCopied ? 'Copied!' : 'Copy'}
+              </button>
+            </div>
+          </div>
+        )}
       </div>
 
       <div className="space-y-2.5">
