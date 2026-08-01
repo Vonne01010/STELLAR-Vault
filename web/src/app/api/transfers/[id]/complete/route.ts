@@ -18,14 +18,24 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     if (auth.pubkey !== transfer.senderPubkey && auth.pubkey !== transfer.recipientPubkey) {
       return Response.json({ error: "You're not part of this transfer." }, { status: 403 })
     }
+    if (transfer.status === "submitted") {
+      return Response.json({ error: "This transfer has already been completed" }, { status: 409 })
+    }
 
     const body = await request.json().catch(() => null)
     const hash = typeof body?.hash === "string" ? body.hash : null
 
-    await prisma.pendingTransfer.update({
-      where: { id },
+    // Idempotency guard: only the request that actually flips the status
+    // away from its current pre-submitted state gets to send notifications.
+    // A duplicate/racing call sees count === 0 and short-circuits.
+    const flip = await prisma.pendingTransfer.updateMany({
+      where: { id, status: { not: "submitted" } },
       data: { status: "submitted" },
     })
+
+    if (flip.count === 0) {
+      return Response.json({ error: "This transfer has already been completed" }, { status: 409 })
+    }
 
     await Promise.all([
       prisma.notification.create({

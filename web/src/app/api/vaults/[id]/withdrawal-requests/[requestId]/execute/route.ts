@@ -57,19 +57,39 @@ export async function POST(
       return Response.json({ error: "Amount exceeds current vault balance" }, { status: 409 })
     }
 
-    const [updatedRequest] = await prisma.$transaction([
-      prisma.withdrawalRequest.update({
-        where: { id: requestId },
-        data: { status: "executed" },
-      }),
-      prisma.vault.update({
-        where: { id: vaultId },
-        data: {
-          balance: { decrement: withdrawalRequest.amount },
-          ...(vault.rotationOrder ? { currentRound: { increment: 1 } } : {}),
-        },
-      }),
-    ])
+    // Idempotency guard: the status flip and the balance decrement happen
+    // together inside one interactive transaction. updateMany's WHERE
+    // includes status, so only the request that actually wins the race from
+    // "pending" -> "executed" proceeds to touch the balance. A concurrent
+    // duplicate call gets count === 0 and is rejected before any side effects.
+    let updatedRequest
+    try {
+      updatedRequest = await prisma.$transaction(async (tx) => {
+        const flip = await tx.withdrawalRequest.updateMany({
+          where: { id: requestId, status: { not: "executed" } },
+          data: { status: "executed" },
+        })
+
+        if (flip.count === 0) {
+          throw new Error("ALREADY_EXECUTED")
+        }
+
+        await tx.vault.update({
+          where: { id: vaultId },
+          data: {
+            balance: { decrement: withdrawalRequest.amount },
+            ...(vault.rotationOrder ? { currentRound: { increment: 1 } } : {}),
+          },
+        })
+
+        return tx.withdrawalRequest.findUniqueOrThrow({ where: { id: requestId } })
+      })
+    } catch (err) {
+      if (err instanceof Error && err.message === "ALREADY_EXECUTED") {
+        return Response.json({ error: "This request has already executed" }, { status: 409 })
+      }
+      throw err
+    }
 
     await logActivity({
       pubkey: auth.pubkey,
