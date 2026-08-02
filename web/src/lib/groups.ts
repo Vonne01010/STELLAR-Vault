@@ -55,3 +55,28 @@ export async function sendGroupMessage(groupId: string, body: string): Promise<G
   if (!res.ok) throw new Error(data?.error ?? 'Failed to send message');
   return data.message;
 }
+
+export async function addGroupMembers(groupId: string, memberPubkeys: string[]): Promise<void> {
+  const res = await authFetch(`/api/groups/${groupId}/members`, {
+    method: 'POST',
+    body: JSON.stringify({ memberPubkeys }),
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data?.error ?? 'Failed to add members');
+}
+
+export async function leaveGroup(groupId: string): Promise<void> {
+  const res = await authFetch(`/api/groups/${groupId}/leave`, { method: 'POST' });
+  if (!res.ok) {
+    const data = await res.json().catch(() => null);
+    throw new Error(data?.error ?? 'Failed to leave group');
+  }
+}
+
+export async function deleteGroup(groupId: string): Promise<void> {
+  const res = await authFetch(`/api/groups/${groupId}`, { method: 'DELETE' });
+  if (!res.ok) {
+    const data = await res.json().catch(() => null);
+    throw new Error(data?.error ?? 'Failed to delete group');
+  }
+}
