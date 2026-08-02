@@ -22,10 +22,11 @@ export async function GET(request: Request) {
       orderBy: { group: { createdAt: "desc" } },
     })
 
-    const groups = memberships.map((m) => ({
+     const groups = memberships.map((m) => ({
       id: m.group.id,
       name: m.group.name,
       createdAt: m.group.createdAt,
+      createdBy: m.group.createdBy,
       memberCount: m.group.members.length,
       members: m.group.members.map((gm) => ({ pubkey: gm.user.pubkey, username: gm.user.username })),
     }))
