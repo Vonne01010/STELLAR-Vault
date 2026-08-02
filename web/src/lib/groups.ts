@@ -9,6 +9,7 @@ export interface GroupChat {
   id: string;
   name: string;
   createdAt: string;
+  createdBy: string;
   memberCount: number;
   members: GroupMember[];
 }
