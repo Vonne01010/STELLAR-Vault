@@ -63,7 +63,9 @@ model User {
   referralsMade Referral[] @relation("ReferralsMade")
   referredBy    Referral?  @relation("ReferredBy")
 
-  
+  createdGroups     GroupChat[]       @relation("CreatedGroups")
+  groupMemberships  GroupChatMember[]
+  sentGroupMessages GroupMessage[]    @relation("SentGroupMessages")
 }
 
 model Vault {
