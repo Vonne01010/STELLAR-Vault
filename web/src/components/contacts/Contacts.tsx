@@ -247,7 +247,12 @@ export default function Contacts({
           publicKey={publicKey}
           groupId={openGroup.id}
           groupName={openGroup.name}
+          isAdmin={groups.find((g) => g.id === openGroup.id)?.createdBy === publicKey}
           onClose={() => setOpenGroup(null)}
+          onLeft={() => {
+            setOpenGroup(null);
+            void refreshGroups();
+          }}
         />
       )}
     </div>
