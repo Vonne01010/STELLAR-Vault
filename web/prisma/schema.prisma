@@ -292,7 +292,7 @@ model GroupChatMember {
   pubkey   String
   joinedAt DateTime @default(now())
 
-  group GroupChat @relation(fields: [groupId], references: [id])
+  group GroupChat @relation(fields: [groupId], references: [id], onDelete: Cascade)
   user  User      @relation(fields: [pubkey], references: [pubkey])
 
   @@unique([groupId, pubkey])
@@ -305,7 +305,7 @@ model GroupMessage {
   body         String
   createdAt    DateTime @default(now())
 
-  group  GroupChat @relation(fields: [groupId], references: [id])
+  group  GroupChat @relation(fields: [groupId], references: [id], onDelete: Cascade)
   sender User      @relation("SentGroupMessages", fields: [senderPubkey], references: [pubkey])
 
   @@index([groupId, createdAt])
