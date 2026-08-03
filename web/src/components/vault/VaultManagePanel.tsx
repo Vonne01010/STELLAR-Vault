@@ -271,6 +271,7 @@ export default function VaultManagePanel({ vault, isOwned, isMemberOnly, publicK
   };
 
   const handleRequestWithdrawal = async (recipient: string, amount: number) => {
+    if (!publicKey) return;
     setRequesting(true);
     setRequestError('');
     try {
@@ -307,6 +308,7 @@ export default function VaultManagePanel({ vault, isOwned, isMemberOnly, publicK
   };
 
   const handleApproveWithdrawal = async (request: VaultWithdrawalRequestRow) => {
+    if (!publicKey) return;
     setWithdrawalBusy(request.id);
     setWithdrawalActionError('');
     try {
@@ -334,6 +336,7 @@ export default function VaultManagePanel({ vault, isOwned, isMemberOnly, publicK
   };
 
   const handleExecuteWithdrawal = async (request: VaultWithdrawalRequestRow) => {
+    if (!publicKey) return;
     setWithdrawalBusy(request.id);
     setWithdrawalActionError('');
     try {
